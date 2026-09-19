@@ -1,5 +1,36 @@
-import "dotenv/config";
+import { config as loadDotenv } from "dotenv";
+import { existsSync } from "node:fs";
+import { resolve, dirname } from "node:path";
+import { fileURLToPath } from "node:url";
 import { z } from "zod";
+
+const here = dirname(fileURLToPath(import.meta.url));
+const candidates = [
+  resolve(here, "../../../.env"), // monorepo root when running from apps/api/src|dist
+  resolve(here, "../../.env"),
+  resolve(process.cwd(), ".env"),
+  resolve(process.cwd(), "../../.env"),
+];
+for (const path of candidates) {
+  if (existsSync(path)) {
+    loadDotenv({ path });
+    break;
+  }
+}
+
+// Compat with root .env naming
+if (!process.env.PORT && process.env.API_PORT) {
+  process.env.PORT = process.env.API_PORT;
+}
+if (!process.env.GOOGLE_TOKEN_ENCRYPTION_KEY && process.env.TOKEN_ENCRYPTION_KEY) {
+  process.env.GOOGLE_TOKEN_ENCRYPTION_KEY = process.env.TOKEN_ENCRYPTION_KEY;
+}
+if (!process.env.APP_URL) {
+  process.env.APP_URL = "http://localhost:3000";
+}
+if (!process.env.CORS_ORIGIN) {
+  process.env.CORS_ORIGIN = "http://localhost:3000";
+}
 
 const EnvSchema = z.object({
   PORT: z.coerce.number().default(3001),
@@ -7,7 +38,6 @@ const EnvSchema = z.object({
   SUPABASE_URL: z.string().url(),
   SUPABASE_ANON_KEY: z.string().min(1),
   SUPABASE_SERVICE_ROLE_KEY: z.string().min(1),
-  // Google Calendar sync is optional until OAuth credentials are configured.
   GOOGLE_CLIENT_ID: z.string().min(1).optional(),
   GOOGLE_CLIENT_SECRET: z.string().min(1).optional(),
   GOOGLE_TOKEN_ENCRYPTION_KEY: z.string().min(16).optional(),
