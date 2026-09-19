@@ -3,12 +3,15 @@ import { env } from "../config.js";
 
 export type DatabaseClient = SupabaseClient;
 
+const serverAuthOptions = {
+  autoRefreshToken: false,
+  persistSession: false,
+} as const;
+
+/** Server-side client: no browser session / realtime needed. */
 export function createServiceClient(): SupabaseClient {
   return createClient(env.SUPABASE_URL, env.SUPABASE_SERVICE_ROLE_KEY, {
-    auth: {
-      autoRefreshToken: false,
-      persistSession: false,
-    },
+    auth: serverAuthOptions,
   });
 }
 
@@ -19,9 +22,6 @@ export function createUserClient(jwt: string): SupabaseClient {
         Authorization: `Bearer ${jwt}`,
       },
     },
-    auth: {
-      autoRefreshToken: false,
-      persistSession: false,
-    },
+    auth: serverAuthOptions,
   });
 }

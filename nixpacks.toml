@@ -2,7 +2,7 @@
 # El Root Directory del servicio debe quedar vacío (raíz del repo).
 
 [phases.setup]
-nixPkgs = ["nodejs_20"]
+nixPkgs = ["nodejs_22"]
 
 [phases.install]
 cmds = ["corepack enable", "corepack prepare pnpm@9.15.4 --activate", "pnpm install --frozen-lockfile"]
