@@ -1,0 +1,12 @@
+# Config as Code para el servicio API.
+# Railway → Settings → Config-as-code path: railway.api.toml
+# Root Directory: (vacío)
+
+[build]
+builder = "DOCKERFILE"
+dockerfilePath = "Dockerfile.api"
+
+[deploy]
+healthcheckPath = "/health"
+healthcheckTimeout = 30
+restartPolicyType = "ON_FAILURE"

@@ -1,0 +1,24 @@
+# API — build desde la raíz del monorepo.
+# Railway Settings:
+#   Root Directory: (vacío)
+#   Builder: Dockerfile
+#   Dockerfile path: Dockerfile.api
+
+FROM node:20-bookworm-slim
+
+RUN corepack enable && corepack prepare pnpm@9.15.4 --activate
+
+WORKDIR /app
+
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml tsconfig.base.json ./
+COPY packages/domain ./packages/domain
+COPY apps/api ./apps/api
+
+RUN pnpm install --frozen-lockfile --filter @agenda/api...
+RUN pnpm --filter @agenda/domain build
+RUN pnpm --filter @agenda/api build
+
+ENV NODE_ENV=production
+WORKDIR /app/apps/api
+EXPOSE 3000
+CMD ["node", "dist/index.js"]

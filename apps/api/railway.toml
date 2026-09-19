@@ -1,6 +1,12 @@
+# Este archivo solo aplica si el Root Directory del servicio es la RAÍZ del repo
+# (vacío). No uses Root Directory = apps/api: ahí npm no entiende workspace:*.
+
 [build]
 builder = "NIXPACKS"
+buildCommand = "pnpm install --frozen-lockfile && pnpm --filter @agenda/api build"
 
 [deploy]
+startCommand = "pnpm --filter @agenda/api start"
 healthcheckPath = "/health"
+healthcheckTimeout = 30
 restartPolicyType = "ON_FAILURE"

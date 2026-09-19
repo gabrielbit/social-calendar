@@ -1,0 +1,11 @@
+# Railway / Nixpacks: forzar pnpm en monorepo (NO uses Root Directory = apps/api).
+# El Root Directory del servicio debe quedar vacío (raíz del repo).
+
+[phases.setup]
+nixPkgs = ["nodejs_20"]
+
+[phases.install]
+cmds = ["corepack enable", "corepack prepare pnpm@9.15.4 --activate", "pnpm install --frozen-lockfile"]
+
+# El build concreto lo define cada servicio en Railway (Build Command).
+# Dejá este archivo solo para que la fase install nunca use `npm i`.

@@ -1,18 +1,24 @@
 {
   "name": "agenda-comunidad",
   "private": true,
+  "packageManager": "pnpm@9.15.4",
   "scripts": {
     "dev": "pnpm -r --parallel --filter @agenda/web --filter @agenda/api dev",
     "dev:web": "pnpm --filter @agenda/web dev",
     "dev:api": "pnpm --filter @agenda/api dev",
     "dev:worker": "pnpm --filter @agenda/worker dev",
     "build": "pnpm -r build",
+    "build:api": "pnpm --filter @agenda/api build",
+    "build:worker": "pnpm --filter @agenda/worker build",
+    "start:api": "pnpm --filter @agenda/api start",
+    "start:worker": "pnpm --filter @agenda/worker start",
     "lint": "pnpm -r lint",
     "typecheck": "pnpm -r typecheck",
     "test": "pnpm -r test",
     "test:unit": "pnpm -r --filter @agenda/domain --filter @agenda/api --filter @agenda/worker test"
   },
   "engines": {
-    "node": ">=20"
+    "node": ">=20",
+    "pnpm": ">=9"
   }
 }
