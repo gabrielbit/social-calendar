@@ -1,3 +1,4 @@
+import fp from "fastify-plugin";
 import type { FastifyPluginAsync, FastifyReply } from "fastify";
 import { createServiceClient } from "../lib/supabase.js";
 
@@ -25,4 +26,7 @@ const authPlugin: FastifyPluginAsync = async (app) => {
   });
 };
 
-export default authPlugin;
+// Break encapsulation so `authenticate` is visible to nested /api route plugins.
+export default fp(authPlugin, {
+  name: "auth-plugin",
+});
