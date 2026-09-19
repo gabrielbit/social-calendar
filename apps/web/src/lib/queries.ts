@@ -1,0 +1,325 @@
+import { createClient } from "@/lib/supabase/server";
+import type {
+  AgendaOccurrence,
+  ExploreResult,
+  NetworkBirthday,
+  OccurrenceDetail,
+  ProfilePublic,
+  Tag,
+} from "@/lib/types";
+
+export async function getFeaturedTags(limit = 12): Promise<Tag[]> {
+  const supabase = await createClient();
+  const { data } = await supabase.from("tags").select("id, slug, name").limit(limit);
+  return (data ?? []) as Tag[];
+}
+
+export async function getProfileBySlug(slug: string): Promise<ProfilePublic | null> {
+  const supabase = await createClient();
+  const { data } = await supabase
+    .from("profiles_public")
+    .select("*")
+    .eq("slug", slug)
+    .maybeSingle();
+  return data as ProfilePublic | null;
+}
+
+export async function getPrimaryAgendaId(ownerId: string): Promise<string | null> {
+  const supabase = await createClient();
+  const { data } = await supabase
+    .from("agendas")
+    .select("id")
+    .eq("owner_id", ownerId)
+    .eq("is_primary", true)
+    .maybeSingle();
+  return data?.id ?? null;
+}
+
+export async function getAgendaOccurrences(
+  agendaId: string,
+  from: string,
+  to: string,
+): Promise<AgendaOccurrence[]> {
+  const supabase = await createClient();
+  const { data } = await supabase.rpc("agenda_occurrences", {
+    p_agenda_id: agendaId,
+    p_from: from,
+    p_to: to,
+  });
+  return (data ?? []) as AgendaOccurrence[];
+}
+
+export async function getOccurrenceDetail(
+  occurrenceId: string,
+): Promise<OccurrenceDetail | null> {
+  const supabase = await createClient();
+  const { data: occurrence } = await supabase
+    .from("event_occurrences")
+    .select(
+      `
+      id, event_id, starts_at, ends_at, all_day, timezone, cancelled,
+      event:events (
+        id, slug, title, description_html, visibility, editorial_status,
+        location_mode, online_url, site_url, tickets_url, is_free, price_label,
+        cover_image_url, author_id, timezone, contact_type, contact_value,
+        author:profiles!events_author_id_fkey ( slug, display_name, avatar_url ),
+        venue:venues ( name, address, zone, city ),
+        event_tags ( tag:tags ( id, slug, name ) )
+      )
+    `,
+    )
+    .eq("id", occurrenceId)
+    .maybeSingle();
+
+  if (!occurrence?.event) return null;
+
+  const raw = occurrence as Record<string, unknown>;
+  const eventRaw = raw.event as Record<string, unknown>;
+  const eventTags = (eventRaw.event_tags as Array<{ tag: Tag }> | undefined) ?? [];
+
+  return {
+    id: raw.id as string,
+    event_id: raw.event_id as string,
+    starts_at: raw.starts_at as string,
+    ends_at: raw.ends_at as string,
+    all_day: raw.all_day as boolean,
+    timezone: raw.timezone as string,
+    cancelled: raw.cancelled as boolean,
+    event: {
+      ...(eventRaw as OccurrenceDetail["event"]),
+      tags: eventTags.map((et) => et.tag).filter(Boolean),
+      author: eventRaw.author as OccurrenceDetail["event"]["author"],
+      venue: (eventRaw.venue as OccurrenceDetail["event"]["venue"]) ?? null,
+    },
+  };
+}
+
+export async function exploreOccurrences(opts: {
+  from?: string;
+  to?: string;
+  tag?: string;
+  zone?: string;
+  limit?: number;
+}): Promise<ExploreResult[]> {
+  const supabase = await createClient();
+  const from = opts.from ?? new Date().toISOString();
+  const to =
+    opts.to ?? new Date(Date.now() + 90 * 86400000).toISOString();
+  const limit = opts.limit ?? 40;
+
+  let query = supabase
+    .from("event_occurrences")
+    .select(
+      `
+      id, starts_at, ends_at, all_day, timezone,
+      event:events!inner (
+        title, cover_image_url, editorial_status, visibility, deleted_at,
+        author:profiles!events_author_id_fkey ( slug, display_name ),
+        venue:venues ( zone ),
+        event_tags ( tag:tags ( slug ) )
+      )
+    `,
+    )
+    .eq("cancelled", false)
+    .gte("starts_at", from)
+    .lte("starts_at", to)
+    .eq("event.editorial_status", "published")
+    .in("event.visibility", ["shared", "public"])
+    .is("event.deleted_at", null)
+    .order("starts_at", { ascending: true })
+    .limit(limit);
+
+  const { data } = await query;
+
+  let results: ExploreResult[] = (data ?? []).map((row) => {
+    const r = row as Record<string, unknown>;
+    const event = r.event as Record<string, unknown>;
+    const author = event.author as { slug: string; display_name: string };
+    const venue = event.venue as { zone: string | null } | null;
+    const eventTags =
+      (event.event_tags as Array<{ tag: { slug: string } }> | undefined) ?? [];
+    return {
+      occurrence_id: r.id as string,
+      title: event.title as string,
+      starts_at: r.starts_at as string,
+      ends_at: r.ends_at as string,
+      all_day: r.all_day as boolean,
+      timezone: r.timezone as string,
+      cover_image_url: (event.cover_image_url as string | null) ?? null,
+      author_slug: author.slug,
+      author_name: author.display_name,
+      zone: venue?.zone ?? null,
+      tag_slugs: eventTags.map((t) => t.tag.slug),
+    };
+  });
+
+  if (opts.tag) {
+    results = results.filter((r) => r.tag_slugs.includes(opts.tag!));
+  }
+  if (opts.zone) {
+    const z = opts.zone.toLowerCase();
+    results = results.filter((r) => r.zone?.toLowerCase().includes(z));
+  }
+
+  return results;
+}
+
+export async function getNetworkBirthdays(): Promise<NetworkBirthday[]> {
+  const supabase = await createClient();
+  const { data } = await supabase.rpc("network_birthdays");
+  return (data ?? []) as NetworkBirthday[];
+}
+
+export async function getFollowingOccurrences(
+  userId: string,
+  from: string,
+  to: string,
+): Promise<ExploreResult[]> {
+  const supabase = await createClient();
+  const { data: follows } = await supabase
+    .from("follows")
+    .select("following_id")
+    .eq("follower_id", userId);
+
+  const followingIds = (follows ?? []).map((f) => f.following_id);
+  if (followingIds.length === 0) return [];
+
+  const { data } = await supabase
+    .from("event_occurrences")
+    .select(
+      `
+      id, starts_at, ends_at, all_day, timezone,
+      event:events!inner (
+        title, cover_image_url, author_id,
+        author:profiles!events_author_id_fkey ( slug, display_name ),
+        venue:venues ( zone ),
+        event_tags ( tag:tags ( slug ) )
+      )
+    `,
+    )
+    .eq("cancelled", false)
+    .gte("starts_at", from)
+    .lte("starts_at", to)
+    .in("event.author_id", followingIds)
+    .eq("event.editorial_status", "published")
+    .in("event.visibility", ["shared", "public"])
+    .is("event.deleted_at", null)
+    .order("starts_at", { ascending: true });
+
+  return (data ?? []).map((row) => {
+    const r = row as Record<string, unknown>;
+    const event = r.event as Record<string, unknown>;
+    const author = event.author as { slug: string; display_name: string };
+    const venue = event.venue as { zone: string | null } | null;
+    const eventTags =
+      (event.event_tags as Array<{ tag: { slug: string } }> | undefined) ?? [];
+    return {
+      occurrence_id: r.id as string,
+      title: event.title as string,
+      starts_at: r.starts_at as string,
+      ends_at: r.ends_at as string,
+      all_day: r.all_day as boolean,
+      timezone: r.timezone as string,
+      cover_image_url: (event.cover_image_url as string | null) ?? null,
+      author_slug: author.slug,
+      author_name: author.display_name,
+      zone: venue?.zone ?? null,
+      tag_slugs: eventTags.map((t) => t.tag.slug),
+    };
+  });
+}
+
+export async function getGoingOccurrences(
+  userId: string,
+  from: string,
+  to: string,
+): Promise<ExploreResult[]> {
+  const supabase = await createClient();
+  const { data: rsvps } = await supabase
+    .from("event_rsvps")
+    .select("occurrence_id")
+    .eq("user_id", userId)
+    .eq("status", "going");
+
+  const ids = (rsvps ?? []).map((r) => r.occurrence_id);
+  if (ids.length === 0) return [];
+
+  const { data } = await supabase
+    .from("event_occurrences")
+    .select(
+      `
+      id, starts_at, ends_at, all_day, timezone,
+      event:events!inner (
+        title, cover_image_url,
+        author:profiles!events_author_id_fkey ( slug, display_name ),
+        venue:venues ( zone ),
+        event_tags ( tag:tags ( slug ) )
+      )
+    `,
+    )
+    .in("id", ids)
+    .eq("cancelled", false)
+    .gte("starts_at", from)
+    .lte("starts_at", to)
+    .order("starts_at", { ascending: true });
+
+  return (data ?? []).map((row) => {
+    const r = row as Record<string, unknown>;
+    const event = r.event as Record<string, unknown>;
+    const author = event.author as { slug: string; display_name: string };
+    const venue = event.venue as { zone: string | null } | null;
+    const eventTags =
+      (event.event_tags as Array<{ tag: { slug: string } }> | undefined) ?? [];
+    return {
+      occurrence_id: r.id as string,
+      title: event.title as string,
+      starts_at: r.starts_at as string,
+      ends_at: r.ends_at as string,
+      all_day: r.all_day as boolean,
+      timezone: r.timezone as string,
+      cover_image_url: (event.cover_image_url as string | null) ?? null,
+      author_slug: author.slug,
+      author_name: author.display_name,
+      zone: venue?.zone ?? null,
+      tag_slugs: eventTags.map((t) => t.tag.slug),
+    };
+  });
+}
+
+export async function getSitemapProfiles(): Promise<{ slug: string; updated_at: string }[]> {
+  const supabase = await createClient();
+  const { data } = await supabase
+    .from("profiles_public")
+    .select("slug, created_at")
+    .limit(5000);
+  return (data ?? []).map((p) => ({
+    slug: p.slug,
+    updated_at: p.created_at,
+  }));
+}
+
+export async function getSitemapOccurrences(): Promise<
+  { id: string; starts_at: string }[]
+> {
+  const supabase = await createClient();
+  const { data } = await supabase
+    .from("event_occurrences")
+    .select(
+      `
+      id, starts_at,
+      event:events!inner ( editorial_status, visibility, deleted_at )
+    `,
+    )
+    .eq("cancelled", false)
+    .gte("starts_at", new Date().toISOString())
+    .eq("event.editorial_status", "published")
+    .in("event.visibility", ["shared", "public"])
+    .is("event.deleted_at", null)
+    .order("starts_at", { ascending: true })
+    .limit(5000);
+
+  return (data ?? []).map((o) => ({
+    id: (o as { id: string }).id,
+    starts_at: (o as { starts_at: string }).starts_at,
+  }));
+}

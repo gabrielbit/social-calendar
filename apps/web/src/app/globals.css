@@ -1,0 +1,54 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html {
+    @apply scroll-smooth;
+  }
+
+  body {
+    @apply bg-canvas text-ink antialiased;
+  }
+
+  ::selection {
+    @apply bg-accent-soft text-ink;
+  }
+}
+
+@layer components {
+  .btn-primary {
+    @apply inline-flex items-center justify-center gap-2 rounded-lg bg-accent px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-accent-hover focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent;
+  }
+
+  .btn-secondary {
+    @apply inline-flex items-center justify-center gap-2 rounded-lg border border-border bg-surface px-4 py-2.5 text-sm font-medium text-ink transition-colors hover:bg-canvas focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent;
+  }
+
+  .input-field {
+    @apply w-full rounded-lg border border-border bg-surface px-3 py-2.5 text-sm text-ink placeholder:text-ink-faint focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/20;
+  }
+
+  .card {
+    @apply rounded-xl border border-border bg-surface p-4 shadow-sm;
+  }
+}
+
+/* FullCalendar overrides */
+.fc {
+  --fc-border-color: theme("colors.border");
+  --fc-button-bg-color: theme("colors.accent.DEFAULT");
+  --fc-button-border-color: theme("colors.accent.DEFAULT");
+  --fc-button-hover-bg-color: theme("colors.accent.hover");
+  --fc-button-hover-border-color: theme("colors.accent.hover");
+  --fc-button-active-bg-color: theme("colors.accent.hover");
+  --fc-button-active-border-color: theme("colors.accent.hover");
+  --fc-today-bg-color: theme("colors.accent.soft");
+  --fc-event-bg-color: theme("colors.accent.DEFAULT");
+  --fc-event-border-color: theme("colors.accent.hover");
+  font-family: inherit;
+}
+
+.fc .fc-toolbar-title {
+  @apply text-lg font-semibold text-ink;
+}
