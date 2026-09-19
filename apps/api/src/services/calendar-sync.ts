@@ -1,9 +1,9 @@
 import { createCipheriv, createDecipheriv, createHash, randomBytes } from "node:crypto";
-import { env } from "../config.js";
+import { assertGoogleCalendarConfigured, env } from "../config.js";
 import { createServiceClient } from "../lib/supabase.js";
 
 const GOOGLE_SCOPES = [
-  "https://www.googleapis.com/auth/calendar.events",
+  "https://www.googleapis.com/auth/calendar.app.created",
   "openid",
   "email",
   "profile",
@@ -16,9 +16,10 @@ export type GoogleTokenPayload = {
 };
 
 export function buildGoogleOAuthStartUrl(userId: string): string {
+  assertGoogleCalendarConfigured();
   const redirectUri = `${env.APP_URL}/api/calendar/google/callback`;
   const params = new URLSearchParams({
-    client_id: env.GOOGLE_CLIENT_ID,
+    client_id: env.GOOGLE_CLIENT_ID!,
     redirect_uri: redirectUri,
     response_type: "code",
     scope: GOOGLE_SCOPES.join(" "),
@@ -31,7 +32,8 @@ export function buildGoogleOAuthStartUrl(userId: string): string {
 }
 
 function deriveKey(): Buffer {
-  return createHash("sha256").update(env.GOOGLE_TOKEN_ENCRYPTION_KEY).digest();
+  assertGoogleCalendarConfigured();
+  return createHash("sha256").update(env.GOOGLE_TOKEN_ENCRYPTION_KEY!).digest();
 }
 
 export function encryptGoogleTokens(payload: GoogleTokenPayload): string {
