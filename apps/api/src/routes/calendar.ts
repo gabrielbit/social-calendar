@@ -4,7 +4,7 @@ import { env } from "../config.js";
 import { handleRouteError } from "../lib/route-errors.js";
 import {
   buildGoogleOAuthStartUrl,
-  enqueueGoogleOAuthExchangeJob,
+  exchangeGoogleAuthCode,
   saveGoogleConnection,
 } from "../services/calendar-sync.js";
 
@@ -17,15 +17,10 @@ const calendarRoutes: FastifyPluginAsync = async (app) => {
   app.post("/calendar/google/callback", { preHandler: [app.authenticate] }, async (request, reply) => {
     try {
       const body = z.object({ code: z.string().min(1) }).parse(request.body);
-      const redirectUri = `${env.APP_URL}/api/calendar/google/callback`;
+      const redirectUri = `${env.APP_URL}/auth/google-calendar/callback`;
 
-      await enqueueGoogleOAuthExchangeJob({
-        userId: request.user.id,
-        code: body.code,
-        redirectUri,
-      });
-
-      return reply.code(202).send({ queued: true });
+      const connection = await exchangeGoogleAuthCode(request.user.id, body.code, redirectUri);
+      return reply.code(200).send({ connection });
     } catch (error) {
       return handleRouteError(reply, error);
     }

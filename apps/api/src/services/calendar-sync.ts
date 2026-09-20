@@ -17,7 +17,7 @@ export type GoogleTokenPayload = {
 
 export function buildGoogleOAuthStartUrl(userId: string): string {
   assertGoogleCalendarConfigured();
-  const redirectUri = `${env.APP_URL}/api/calendar/google/callback`;
+  const redirectUri = `${env.APP_URL}/auth/google-calendar/callback`;
   const params = new URLSearchParams({
     client_id: env.GOOGLE_CLIENT_ID!,
     redirect_uri: redirectUri,
@@ -111,19 +111,40 @@ export async function enqueueGoogleSyncJob(payload: {
   return { queued: true };
 }
 
-export async function enqueueGoogleOAuthExchangeJob(payload: {
-  userId: string;
-  code: string;
-  redirectUri: string;
-}) {
-  const db = createServiceClient();
-  const { error } = await db.from("outbox_jobs").insert({
-    job_type: "google_oauth_exchange",
-    payload,
-    status: "pending",
-    run_after: new Date().toISOString(),
+export async function exchangeGoogleAuthCode(userId: string, code: string, redirectUri: string) {
+  assertGoogleCalendarConfigured();
+
+  const body = new URLSearchParams({
+    code,
+    client_id: env.GOOGLE_CLIENT_ID!,
+    client_secret: env.GOOGLE_CLIENT_SECRET!,
+    redirect_uri: redirectUri,
+    grant_type: "authorization_code",
   });
 
-  if (error) throw new Error(error.message);
-  return { queued: true };
+  const res = await fetch("https://oauth2.googleapis.com/token", {
+    method: "POST",
+    headers: { "Content-Type": "application/x-www-form-urlencoded" },
+    body,
+  });
+  const json = (await res.json()) as {
+    access_token?: string;
+    refresh_token?: string;
+    expires_in?: number;
+    error?: string;
+    error_description?: string;
+  };
+
+  if (!res.ok || !json.access_token) {
+    throw Object.assign(
+      new Error(json.error_description ?? json.error ?? "Google no devolvió tokens"),
+      { statusCode: 400 },
+    );
+  }
+
+  return saveGoogleConnection(userId, {
+    accessToken: json.access_token,
+    refreshToken: json.refresh_token,
+    expiresAt: json.expires_in ? Date.now() + json.expires_in * 1000 : undefined,
+  });
 }

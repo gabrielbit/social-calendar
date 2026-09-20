@@ -35,12 +35,16 @@ export async function upsertRsvp(userId: string, input: RsvpInput) {
   if (error || !data) throw new Error(error?.message ?? "Failed to upsert RSVP");
 
   if (parsed.status === "going" || parsed.status === "not_going") {
-    await enqueueGoogleSyncJob({
-      userId,
-      rsvpId: String(data.id),
-      occurrenceId: parsed.occurrenceId,
-      status: parsed.status,
-    });
+    try {
+      await enqueueGoogleSyncJob({
+        userId,
+        rsvpId: String(data.id),
+        occurrenceId: parsed.occurrenceId,
+        status: parsed.status,
+      });
+    } catch (error) {
+      console.error("Google Calendar sync enqueue failed", error);
+    }
   }
 
   return {

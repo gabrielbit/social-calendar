@@ -19,6 +19,7 @@ Prefijo de negocio: `/api`
 | GET | `/api/profiles/me` | Perfil del usuario (incluye año de cumpleaños solo para el dueño) |
 | PATCH | `/api/profiles/me` | Actualizar perfil propio |
 | GET | `/api/profiles/:slug` | Perfil público (sin `birthday_year`) |
+| PATCH | `/api/preferences/me` | Actualizar preferencias privadas (zona, radio, notificaciones) |
 
 ## Eventos y agendas
 

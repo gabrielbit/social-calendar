@@ -4,8 +4,7 @@ import { useState, useTransition } from "react";
 import Link from "next/link";
 import { Calendar, Save } from "lucide-react";
 import { BirthdayVisibilitySchema } from "@agenda/domain";
-import { clientApiPost } from "@/lib/api-client";
-import { appUrl } from "@/lib/dates";
+import { clientApiGet, clientApiPatch } from "@/lib/api-client";
 
 type SettingsFormProps = {
   profile?: {
@@ -48,7 +47,15 @@ export function SettingsForm({ profile, prefs, googleConnected }: SettingsFormPr
   const [pending, startTransition] = useTransition();
 
   function handleGoogleConnect() {
-    window.location.href = `${process.env.NEXT_PUBLIC_API_URL}/calendar/google/connect?returnTo=${encodeURIComponent(appUrl("/settings"))}`;
+    startTransition(async () => {
+      setError(null);
+      try {
+        const { url } = await clientApiGet<{ url: string }>("/calendar/google/connect");
+        window.location.href = url;
+      } catch (err) {
+        setError(err instanceof Error ? err.message : "No se pudo iniciar Google Calendar");
+      }
+    });
   }
 
   function handleSave(e: React.FormEvent) {
@@ -58,7 +65,7 @@ export function SettingsForm({ profile, prefs, googleConnected }: SettingsFormPr
 
     startTransition(async () => {
       try {
-        await clientApiPost("/profiles/me", {
+        await clientApiPatch("/profiles/me", {
           displayName,
           bio: bio || undefined,
           publicLocation: publicLocation || undefined,
@@ -66,7 +73,7 @@ export function SettingsForm({ profile, prefs, googleConnected }: SettingsFormPr
           birthdayDay: birthdayDay ? Number(birthdayDay) : null,
           birthdayVisibility,
         });
-        await clientApiPost("/preferences/me", {
+        await clientApiPatch("/preferences/me", {
           homeZone: homeZone || undefined,
           notifyEmail,
           notifyBirthdays,
@@ -79,7 +86,7 @@ export function SettingsForm({ profile, prefs, googleConnected }: SettingsFormPr
   }
 
   return (
-    <form onSubmit={handleSave} className="card mt-6 space-y-5">
+    <form onSubmit={handleSave} className="mt-8 space-y-5">
       {profile?.slug && (
         <p className="text-sm text-ink-muted">
           Tu agenda:{" "}
@@ -90,7 +97,7 @@ export function SettingsForm({ profile, prefs, googleConnected }: SettingsFormPr
       )}
 
       <label className="block text-sm">
-        <span className="font-medium text-ink-muted">Nombre</span>
+        <span className="text-ink-muted">Nombre</span>
         <input
           className="input-field mt-1"
           value={displayName}
@@ -99,7 +106,7 @@ export function SettingsForm({ profile, prefs, googleConnected }: SettingsFormPr
       </label>
 
       <label className="block text-sm">
-        <span className="font-medium text-ink-muted">Bio</span>
+        <span className="text-ink-muted">Bio</span>
         <textarea
           className="input-field mt-1 min-h-[80px]"
           value={bio}
@@ -108,7 +115,7 @@ export function SettingsForm({ profile, prefs, googleConnected }: SettingsFormPr
       </label>
 
       <label className="block text-sm">
-        <span className="font-medium text-ink-muted">Ubicación pública</span>
+        <span className="text-ink-muted">Ubicación pública</span>
         <input
           className="input-field mt-1"
           value={publicLocation}
@@ -117,7 +124,7 @@ export function SettingsForm({ profile, prefs, googleConnected }: SettingsFormPr
       </label>
 
       <fieldset className="text-sm">
-        <legend className="font-medium text-ink-muted">Cumpleaños (día y mes)</legend>
+        <legend className="text-ink-muted">Cumpleaños (día y mes)</legend>
         <div className="mt-2 flex gap-3">
           <select
             className="input-field flex-1"
@@ -145,7 +152,7 @@ export function SettingsForm({ profile, prefs, googleConnected }: SettingsFormPr
           </select>
         </div>
         <label className="mt-2 block">
-          <span className="font-medium text-ink-muted">Visibilidad</span>
+          <span className="text-ink-muted">Visibilidad</span>
           <select
             className="input-field mt-1"
             value={birthdayVisibility}
@@ -161,7 +168,7 @@ export function SettingsForm({ profile, prefs, googleConnected }: SettingsFormPr
       </fieldset>
 
       <fieldset className="text-sm">
-        <legend className="font-medium text-ink-muted">Preferencias</legend>
+        <legend className="text-ink-muted">Preferencias</legend>
         <label className="mt-2 block">
           <span className="text-ink-muted">Zona habitual</span>
           <input
@@ -188,13 +195,14 @@ export function SettingsForm({ profile, prefs, googleConnected }: SettingsFormPr
         </label>
       </fieldset>
 
-      <div className="rounded-lg border border-border bg-canvas p-4">
+      <div className="rounded-2xl border border-border bg-surface p-4">
         <p className="text-sm font-medium text-ink">Google Calendar</p>
         <p className="mt-1 text-xs text-ink-muted">
           Sincronizá eventos marcados como «Voy» en un calendario secundario.
         </p>
         <button
           type="button"
+          disabled={pending}
           onClick={handleGoogleConnect}
           className="btn-secondary mt-3 text-sm"
         >
@@ -204,12 +212,12 @@ export function SettingsForm({ profile, prefs, googleConnected }: SettingsFormPr
       </div>
 
       {message && (
-        <p className="text-sm text-green-700" role="status">
+        <p className="text-sm text-emerald-400" role="status">
           {message}
         </p>
       )}
       {error && (
-        <p className="text-sm text-red-600" role="alert">
+        <p className="text-sm text-red-400" role="alert">
           {error}
         </p>
       )}

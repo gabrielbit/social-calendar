@@ -60,7 +60,7 @@ export function EventCreateForm() {
     try {
       const parsed = CreateEventSchema.parse(payload);
       const result = await clientApiPost<{ event: { id: string }; occurrences: { id: string }[] }>(
-        "/api/events",
+        "/events",
         parsed,
       );
       const first = result.occurrences[0];
@@ -84,9 +84,9 @@ export function EventCreateForm() {
   };
 
   return (
-    <form onSubmit={onSubmit} className="card mx-auto max-w-xl space-y-4">
+    <form onSubmit={onSubmit} className="mx-auto max-w-xl space-y-5">
       <div>
-        <label htmlFor="title" className="mb-1 block text-sm font-medium">
+        <label htmlFor="title" className="mb-1.5 block text-sm text-ink-muted">
           Título
         </label>
         <input id="title" name="title" required className="input-field" placeholder="Clase de yoga al atardecer" />
@@ -94,7 +94,7 @@ export function EventCreateForm() {
 
       <div className="grid gap-4 sm:grid-cols-2">
         <div>
-          <label htmlFor="startsAt" className="mb-1 block text-sm font-medium">
+          <label htmlFor="startsAt" className="mb-1.5 block text-sm text-ink-muted">
             Inicio
           </label>
           <input
@@ -107,7 +107,7 @@ export function EventCreateForm() {
           />
         </div>
         <div>
-          <label htmlFor="endsAt" className="mb-1 block text-sm font-medium">
+          <label htmlFor="endsAt" className="mb-1.5 block text-sm text-ink-muted">
             Fin
           </label>
           <input
@@ -127,7 +127,7 @@ export function EventCreateForm() {
       </label>
 
       <div>
-        <label htmlFor="visibility" className="mb-1 block text-sm font-medium">
+        <label htmlFor="visibility" className="mb-1.5 block text-sm text-ink-muted">
           Visibilidad
         </label>
         <select id="visibility" name="visibility" className="input-field" defaultValue="shared">
@@ -140,7 +140,7 @@ export function EventCreateForm() {
       </div>
 
       <div>
-        <label htmlFor="description" className="mb-1 block text-sm font-medium">
+        <label htmlFor="description" className="mb-1.5 block text-sm text-ink-muted">
           Descripción (HTML simple permitido)
         </label>
         <textarea id="description" name="description" rows={4} className="input-field" />
@@ -148,13 +148,13 @@ export function EventCreateForm() {
 
       <div className="grid gap-4 sm:grid-cols-2">
         <div>
-          <label htmlFor="tags" className="mb-1 block text-sm font-medium">
+          <label htmlFor="tags" className="mb-1.5 block text-sm text-ink-muted">
             Tags (separados por coma)
           </label>
           <input id="tags" name="tags" className="input-field" placeholder="yoga, pilates" />
         </div>
         <div>
-          <label htmlFor="rrule" className="mb-1 block text-sm font-medium">
+          <label htmlFor="rrule" className="mb-1.5 block text-sm text-ink-muted">
             Recurrencia (RRULE opcional)
           </label>
           <input id="rrule" name="rrule" className="input-field" placeholder="FREQ=WEEKLY;INTERVAL=1" />
@@ -163,13 +163,13 @@ export function EventCreateForm() {
 
       <div className="grid gap-4 sm:grid-cols-2">
         <div>
-          <label htmlFor="siteUrl" className="mb-1 block text-sm font-medium">
+          <label htmlFor="siteUrl" className="mb-1.5 block text-sm text-ink-muted">
             Sitio
           </label>
           <input id="siteUrl" name="siteUrl" type="url" className="input-field" />
         </div>
         <div>
-          <label htmlFor="ticketsUrl" className="mb-1 block text-sm font-medium">
+          <label htmlFor="ticketsUrl" className="mb-1.5 block text-sm text-ink-muted">
             Entradas
           </label>
           <input id="ticketsUrl" name="ticketsUrl" type="url" className="input-field" />
@@ -177,7 +177,7 @@ export function EventCreateForm() {
       </div>
 
       <div>
-        <label htmlFor="coverImageUrl" className="mb-1 block text-sm font-medium">
+        <label htmlFor="coverImageUrl" className="mb-1.5 block text-sm text-ink-muted">
           Imagen principal (URL)
         </label>
         <input id="coverImageUrl" name="coverImageUrl" type="url" className="input-field" />
@@ -198,7 +198,7 @@ export function EventCreateForm() {
       <input type="hidden" name="priceLabel" value="" />
 
       {error ? (
-        <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700" role="alert">
+        <p className="rounded-xl bg-red-500/10 px-3 py-2 text-sm text-red-400" role="alert">
           {error}
         </p>
       ) : null}

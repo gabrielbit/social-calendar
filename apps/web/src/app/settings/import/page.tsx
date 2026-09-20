@@ -5,6 +5,7 @@ import Link from "next/link";
 import { FileText, Link2, Sparkles } from "lucide-react";
 import { parseIcs, parseFlyerText, type ParsedIcsEvent } from "@agenda/domain";
 import { formatEventDate, formatEventTime } from "@/lib/dates";
+import { Container } from "@/components/layout/Container";
 
 type IcsDraft = ParsedIcsEvent & { source: "ics" };
 type FlyerDraft = ReturnType<typeof parseFlyerText> & { source: "flyer" };
@@ -64,18 +65,19 @@ export default function ImportPage() {
   }
 
   return (
+    <Container className="py-10 sm:py-14">
     <div className="mx-auto max-w-2xl">
-      <Link href="/settings" className="text-sm text-accent hover:underline">
+      <Link href="/settings" className="text-sm text-ink-muted hover:text-ink">
         ← Ajustes
       </Link>
-      <h1 className="mt-4 text-2xl font-bold text-ink">Importar eventos</h1>
+      <h1 className="page-title mt-4">Importar eventos</h1>
       <p className="mt-1 text-ink-muted">
         Pegá un ICS, una URL de calendario o texto de un flyer para previsualizar borradores.
       </p>
 
       <section className="card mt-6 space-y-3">
         <h2 className="flex items-center gap-2 font-semibold text-ink">
-          <FileText className="h-4 w-4 text-accent" aria-hidden />
+          <FileText className="size-4 text-accent" aria-hidden />
           Pegar ICS
         </h2>
         <textarea
@@ -91,7 +93,7 @@ export default function ImportPage() {
 
       <section className="card mt-4 space-y-3">
         <h2 className="flex items-center gap-2 font-semibold text-ink">
-          <Link2 className="h-4 w-4 text-accent" aria-hidden />
+          <Link2 className="size-4 text-accent" aria-hidden />
           URL de calendario
         </h2>
         <input
@@ -113,7 +115,7 @@ export default function ImportPage() {
 
       <section className="card mt-4 space-y-3">
         <h2 className="flex items-center gap-2 font-semibold text-ink">
-          <Sparkles className="h-4 w-4 text-accent" aria-hidden />
+          <Sparkles className="size-4 text-accent" aria-hidden />
           Texto de flyer
         </h2>
         <textarea
@@ -128,7 +130,7 @@ export default function ImportPage() {
       </section>
 
       {error && (
-        <p className="mt-4 text-sm text-red-600" role="alert">
+        <p className="mt-4 text-sm text-red-400" role="alert">
           {error}
         </p>
       )}
@@ -171,7 +173,7 @@ export default function ImportPage() {
                       </>
                     )}
                   </div>
-                  <span className="rounded-full bg-accent-soft px-2 py-0.5 text-xs text-accent">
+                  <span className="rounded-full border border-border px-2 py-0.5 text-xs text-ink-muted">
                     {d.source === "ics" ? "ICS" : "Flyer"}
                   </span>
                 </div>
@@ -184,5 +186,6 @@ export default function ImportPage() {
         </section>
       )}
     </div>
+    </Container>
   );
 }

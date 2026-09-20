@@ -17,7 +17,7 @@ import {
   type CalendarEventPayload,
 } from "@agenda/domain";
 import { formatEventDate, formatEventTime, appUrl } from "@/lib/dates";
-import { clientApiPost } from "@/lib/api-client";
+import { clientApiPut } from "@/lib/api-client";
 import { cn } from "@/lib/utils";
 
 type EventActionsProps = {
@@ -49,6 +49,7 @@ export function EventActions({
 }: EventActionsProps) {
   const [rsvp, setRsvp] = useState<"going" | "not_going" | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [needsLogin, setNeedsLogin] = useState(false);
   const [pending, startTransition] = useTransition();
 
   const canonical = canonicalPath ?? `/e/${occurrenceId}`;
@@ -88,9 +89,10 @@ export function EventActions({
 
   function handleRsvp(status: "going" | "not_going") {
     setError(null);
+    setNeedsLogin(false);
     startTransition(async () => {
       try {
-        await clientApiPost("/rsvps", {
+        await clientApiPut("/rsvp", {
           occurrenceId,
           status,
           profileVisible: true,
@@ -98,7 +100,11 @@ export function EventActions({
         });
         setRsvp(status);
       } catch (e) {
-        setError(e instanceof Error ? e.message : "No se pudo guardar el RSVP");
+        const message = e instanceof Error ? e.message : "No se pudo guardar el RSVP";
+        const needsLogin =
+          /missing bearer|invalid or expired|unauthorized|iniciá sesión/i.test(message);
+        setError(needsLogin ? "Tenés que iniciar sesión para marcar Voy." : message);
+        setNeedsLogin(needsLogin);
       }
     });
   }
@@ -112,28 +118,28 @@ export function EventActions({
           rel="noopener noreferrer"
           className="btn-secondary text-sm"
         >
-          <MessageCircle className="h-4 w-4" aria-hidden />
+          <MessageCircle className="size-4" aria-hidden />
           WhatsApp
         </a>
         <a href={googleUrl} target="_blank" rel="noopener noreferrer" className="btn-secondary text-sm">
-          <CalendarPlus className="h-4 w-4" aria-hidden />
+          <CalendarPlus className="size-4" aria-hidden />
           Google
         </a>
         <button type="button" onClick={downloadIcs} className="btn-secondary text-sm">
-          <Download className="h-4 w-4" aria-hidden />
+          <Download className="size-4" aria-hidden />
           ICS
         </button>
         {canonicalPath && (
           <Link href={canonicalPath} className="btn-secondary text-sm">
-            <ExternalLink className="h-4 w-4" aria-hidden />
+            <ExternalLink className="size-4" aria-hidden />
             Enlace canónico
           </Link>
         )}
       </div>
 
       {showRsvp && (
-        <div className="rounded-lg border border-border bg-canvas p-3">
-          <p className="mb-2 text-sm font-medium text-ink">¿Vas a ir?</p>
+        <div className="rounded-2xl border border-border bg-surface p-4">
+          <p className="mb-3 text-sm font-medium text-ink">¿Vas a ir?</p>
           <div className="flex gap-2">
             <button
               type="button"
@@ -144,7 +150,7 @@ export function EventActions({
                 rsvp === "going" && "border-accent bg-accent-soft text-accent",
               )}
             >
-              <ThumbsUp className="h-4 w-4" aria-hidden />
+              <ThumbsUp className="size-4" aria-hidden />
               Voy
             </button>
             <button
@@ -156,16 +162,21 @@ export function EventActions({
                 rsvp === "not_going" && "border-ink-muted bg-canvas text-ink-muted",
               )}
             >
-              <ThumbsDown className="h-4 w-4" aria-hidden />
+              <ThumbsDown className="size-4" aria-hidden />
               No voy
             </button>
           </div>
           {error && (
-            <p className="mt-2 text-sm text-red-600" role="alert">
-              {error}.{" "}
-              <Link href="/auth/login" className="underline">
-                Iniciá sesión
-              </Link>
+            <p className="mt-2 text-sm text-red-400" role="alert">
+              {error}
+              {needsLogin ? (
+                <>
+                  {" "}
+                  <Link href="/auth/login" className="underline">
+                    Iniciá sesión
+                  </Link>
+                </>
+              ) : null}
             </p>
           )}
         </div>

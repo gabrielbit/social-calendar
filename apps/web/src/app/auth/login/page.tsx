@@ -1,16 +1,32 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { Mail } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { appUrl } from "@/lib/dates";
+import { Container } from "@/components/layout/Container";
 
 export default function LoginPage() {
   const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
   const [sent, setSent] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const params = new URLSearchParams(window.location.hash.replace(/^#/, ""));
+    const access_token = params.get("access_token");
+    const refresh_token = params.get("refresh_token");
+    if (!access_token || !refresh_token) return;
+
+    const supabase = createClient();
+    void supabase.auth.setSession({ access_token, refresh_token }).then(({ data, error: authError }) => {
+      if (authError || !data.session) return;
+      window.location.replace("/");
+    });
+  }, []);
 
   async function handleMagicLink(e: React.FormEvent) {
     e.preventDefault();
@@ -31,6 +47,19 @@ export default function LoginPage() {
     setSent(true);
   }
 
+  async function handlePassword() {
+    setError(null);
+    setLoading(true);
+    const supabase = createClient();
+    const { error: authError } = await supabase.auth.signInWithPassword({ email, password });
+    setLoading(false);
+    if (authError) {
+      setError(authError.message);
+      return;
+    }
+    window.location.href = "/";
+  }
+
   async function handleGoogle() {
     setError(null);
     const supabase = createClient();
@@ -44,62 +73,81 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="mx-auto max-w-md">
-      <h1 className="text-2xl font-bold text-ink">Entrar</h1>
-      <p className="mt-2 text-ink-muted">
-        Magic link por email o Google. Sin contraseñas.
-      </p>
+    <Container className="flex min-h-[calc(100dvh-10rem)] items-center py-16">
+      <div className="mx-auto w-full max-w-md text-center">
+        <h1 className="page-title">Entrar</h1>
+        <p className="page-lede mx-auto">Magic link, contraseña o Google.</p>
 
-      {sent ? (
-        <div className="card mt-6 text-sm text-ink-muted" role="status">
-          Te enviamos un enlace a <strong className="text-ink">{email}</strong>. Revisá tu
-          bandeja de entrada.
+        {sent ? (
+          <div className="card mt-8 text-pretty text-sm text-ink-muted" role="status">
+            Te enviamos un enlace a <strong className="text-ink">{email}</strong>. Revisá tu
+            bandeja de entrada.
+          </div>
+        ) : (
+          <form onSubmit={handleMagicLink} className="mt-8 space-y-4 text-left">
+            <label className="block text-sm">
+              <span className="text-ink-muted">Email</span>
+              <input
+                type="email"
+                required
+                autoComplete="email"
+                className="input-field mt-1.5"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="tu@email.com"
+              />
+            </label>
+            <button type="submit" disabled={loading} className="btn-primary w-full">
+              <Mail className="size-4" aria-hidden />
+              {loading ? "Enviando…" : "Enviar magic link"}
+            </button>
+            <label className="block text-sm">
+              <span className="text-ink-muted">Contraseña (opcional)</span>
+              <input
+                type="password"
+                autoComplete="current-password"
+                className="input-field mt-1.5"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder="Si ya tenés una"
+              />
+            </label>
+            <button
+              type="button"
+              disabled={loading || !password}
+              onClick={handlePassword}
+              className="btn-secondary w-full"
+            >
+              Entrar con contraseña
+            </button>
+          </form>
+        )}
+
+        <div className="relative my-8">
+          <div className="absolute inset-0 flex items-center">
+            <div className="w-full border-t border-border" />
+          </div>
+          <div className="relative flex justify-center text-xs uppercase">
+            <span className="bg-canvas px-2 text-ink-faint">o</span>
+          </div>
         </div>
-      ) : (
-        <form onSubmit={handleMagicLink} className="card mt-6 space-y-4">
-          <label className="block text-sm">
-            <span className="font-medium text-ink-muted">Email</span>
-            <input
-              type="email"
-              required
-              autoComplete="email"
-              className="input-field mt-1"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              placeholder="tu@email.com"
-            />
-          </label>
-          <button type="submit" disabled={loading} className="btn-primary w-full">
-            <Mail className="h-4 w-4" aria-hidden />
-            {loading ? "Enviando…" : "Enviar magic link"}
-          </button>
-        </form>
-      )}
 
-      <div className="relative my-6">
-        <div className="absolute inset-0 flex items-center">
-          <div className="w-full border-t border-border" />
-        </div>
-        <div className="relative flex justify-center text-xs uppercase">
-          <span className="bg-canvas px-2 text-ink-faint">o</span>
-        </div>
-      </div>
+        <button type="button" onClick={handleGoogle} className="btn-secondary w-full">
+          Continuar con Google
+        </button>
 
-      <button type="button" onClick={handleGoogle} className="btn-secondary w-full">
-        Continuar con Google
-      </button>
+        {error ? (
+          <p className="mt-4 text-sm text-red-400" role="alert">
+            {error}
+          </p>
+        ) : null}
 
-      {error && (
-        <p className="mt-4 text-sm text-red-600" role="alert">
-          {error}
+        <p className="mt-10 text-sm text-ink-faint">
+          <Link href="/" className="hover:text-ink">
+            ← Volver al inicio
+          </Link>
         </p>
-      )}
-
-      <p className="mt-8 text-center text-sm text-ink-faint">
-        <Link href="/" className="hover:text-accent">
-          ← Volver al inicio
-        </Link>
-      </p>
-    </div>
+      </div>
+    </Container>
   );
 }

@@ -1,6 +1,5 @@
+import { apiUrl } from "@/lib/api-url";
 import { createClient } from "@/lib/supabase/server";
-
-const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3001";
 
 export class ApiError extends Error {
   constructor(
@@ -39,7 +38,7 @@ export async function apiFetch<T>(
     body = JSON.stringify(init.json);
   }
 
-  const res = await fetch(`${API_URL}${path.startsWith("/") ? path : `/${path}`}`, {
+  const res = await fetch(apiUrl(path), {
     ...init,
     headers,
     body,
@@ -50,8 +49,8 @@ export async function apiFetch<T>(
 
   if (!res.ok) {
     const message =
-      typeof parsed === "object" && parsed && "message" in parsed
-        ? String((parsed as { message: string }).message)
+      typeof parsed === "object" && parsed && "error" in parsed
+        ? String((parsed as { error: string }).error)
         : res.statusText;
     throw new ApiError(message, res.status, parsed);
   }

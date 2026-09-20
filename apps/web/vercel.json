@@ -1,1 +1,4 @@
-{}
+{
+  "installCommand": "cd ../.. && pnpm install --frozen-lockfile",
+  "buildCommand": "cd ../.. && pnpm --filter @agenda/domain build && pnpm --filter @agenda/web build"
+}

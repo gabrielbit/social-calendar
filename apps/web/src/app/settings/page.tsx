@@ -1,6 +1,8 @@
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import { SettingsForm } from "@/components/settings/SettingsForm";
+import { Container } from "@/components/layout/Container";
+import { PageHeader } from "@/components/layout/PageHeader";
 import { createClient } from "@/lib/supabase/server";
 
 export default async function SettingsPage() {
@@ -33,21 +35,22 @@ export default async function SettingsPage() {
     .maybeSingle();
 
   return (
-    <div className="mx-auto max-w-lg">
-      <h1 className="text-2xl font-bold text-ink">Ajustes</h1>
-      <p className="mt-1 text-ink-muted">Perfil, cumpleaños y preferencias.</p>
+    <Container className="py-10 sm:py-14">
+      <div className="mx-auto max-w-lg">
+        <PageHeader title="Ajustes" description="Perfil, cumpleaños y preferencias." />
 
-      <SettingsForm
-        profile={profile ?? undefined}
-        prefs={prefs ?? undefined}
-        googleConnected={calendarConn?.status === "active"}
-      />
+        <SettingsForm
+          profile={profile ?? undefined}
+          prefs={prefs ?? undefined}
+          googleConnected={calendarConn?.status === "active"}
+        />
 
-      <section className="mt-8">
-        <Link href="/settings/import" className="btn-secondary">
-          Importar eventos (ICS / flyer)
-        </Link>
-      </section>
-    </div>
+        <section className="mt-8">
+          <Link href="/settings/import" className="btn-secondary">
+            Importar eventos (ICS / flyer)
+          </Link>
+        </section>
+      </div>
+    </Container>
   );
 }

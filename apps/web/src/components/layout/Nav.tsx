@@ -1,14 +1,8 @@
 import Link from "next/link";
-import { CalendarDays, Compass, Plus, Settings, User } from "lucide-react";
+import { User } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
-import { cn } from "@/lib/utils";
-
-const links = [
-  { href: "/explorar", label: "Explorar", icon: Compass },
-  { href: "/mi-agenda", label: "Mi agenda", icon: CalendarDays },
-  { href: "/events/new", label: "Nuevo", icon: Plus },
-  { href: "/settings", label: "Ajustes", icon: Settings },
-];
+import { Container } from "@/components/layout/Container";
+import { NavLinks } from "@/components/layout/NavLinks";
 
 export async function Nav() {
   const supabase = await createClient();
@@ -17,46 +11,35 @@ export async function Nav() {
   } = await supabase.auth.getUser();
 
   return (
-    <header className="sticky top-0 z-50 border-b border-border bg-canvas/90 backdrop-blur-md">
-      <div className="mx-auto flex max-w-5xl items-center justify-between gap-4 px-4 py-3">
-        <Link href="/" className="group flex items-center gap-2">
-          <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-accent text-sm font-bold text-white">
-            AC
+    <header className="fixed inset-x-0 top-0 z-nav border-b border-border bg-canvas/80 pt-[env(safe-area-inset-top)] backdrop-blur-md">
+      <Container className="flex h-14 items-center justify-between gap-4">
+        <Link href="/" className="flex items-center gap-2.5" aria-label="Agenda">
+          <span
+            className="flex size-7 items-center justify-center rounded-lg bg-surface text-accent"
+            aria-hidden
+          >
+            <span className="size-2.5 rounded-full bg-accent" />
           </span>
-          <span className="hidden font-semibold tracking-tight text-ink sm:inline">
-            Agenda Comunidad
-          </span>
+          <span className="text-sm font-medium text-ink">Agenda</span>
         </Link>
 
-        <nav className="flex items-center gap-1 sm:gap-2" aria-label="Principal">
-          {links.map(({ href, label, icon: Icon }) => (
-            <Link
-              key={href}
-              href={href}
-              className={cn(
-                "flex items-center gap-1.5 rounded-lg px-2.5 py-2 text-sm text-ink-muted transition-colors hover:bg-accent-soft hover:text-ink sm:px-3",
-              )}
-            >
-              <Icon className="h-4 w-4" aria-hidden />
-              <span className="hidden sm:inline">{label}</span>
-            </Link>
-          ))}
-
+        <div className="flex items-center gap-2">
+          <NavLinks />
           {user ? (
             <Link
               href="/settings"
-              className="ml-1 flex h-9 w-9 items-center justify-center rounded-full bg-accent-soft text-accent"
+              className="flex size-8 items-center justify-center rounded-full bg-accent text-xs font-medium text-canvas"
               aria-label="Tu perfil"
             >
-              <User className="h-4 w-4" />
+              <User className="size-4" />
             </Link>
           ) : (
-            <Link href="/auth/login" className="btn-primary ml-1 px-3 py-2 text-sm">
+            <Link href="/auth/login" className="btn-secondary px-3 py-1.5 text-sm">
               Entrar
             </Link>
           )}
-        </nav>
-      </div>
+        </div>
+      </Container>
     </header>
   );
 }

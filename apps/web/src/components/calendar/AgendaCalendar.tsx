@@ -1,10 +1,6 @@
 "use client";
 
 import { useMemo } from "react";
-import "@fullcalendar/core/index.css";
-import "@fullcalendar/daygrid/index.css";
-import "@fullcalendar/timegrid/index.css";
-import "@fullcalendar/list/index.css";
 import FullCalendar from "@fullcalendar/react";
 import dayGridPlugin from "@fullcalendar/daygrid";
 import timeGridPlugin from "@fullcalendar/timegrid";
@@ -13,13 +9,15 @@ import interactionPlugin from "@fullcalendar/interaction";
 import rrulePlugin from "@fullcalendar/rrule";
 import { useRouter } from "next/navigation";
 import type { AgendaOccurrence } from "@/lib/types";
+import { cn } from "@/lib/utils";
 
 type AgendaCalendarProps = {
   occurrences: AgendaOccurrence[];
   agendaSlug: string;
+  className?: string;
 };
 
-export function AgendaCalendar({ occurrences, agendaSlug }: AgendaCalendarProps) {
+export function AgendaCalendar({ occurrences, agendaSlug, className }: AgendaCalendarProps) {
   const router = useRouter();
 
   const events = useMemo(
@@ -39,7 +37,7 @@ export function AgendaCalendar({ occurrences, agendaSlug }: AgendaCalendarProps)
   );
 
   return (
-    <div className="hidden md:block">
+    <div className={cn("min-h-[40rem] overflow-hidden rounded-2xl border border-border bg-surface p-4", className)}>
       <FullCalendar
         plugins={[dayGridPlugin, timeGridPlugin, listPlugin, interactionPlugin, rrulePlugin]}
         initialView="dayGridMonth"

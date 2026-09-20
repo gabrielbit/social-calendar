@@ -3,7 +3,13 @@ import type { FastifyPluginAsync } from "fastify";
 import { z } from "zod";
 import { handleRouteError } from "../lib/route-errors.js";
 import { createServiceClient } from "../lib/supabase.js";
-import { ensureOnboarding, getOwnerProfile, getPublicProfile, updateProfile } from "../services/profiles.js";
+import {
+  ensureOnboarding,
+  getOwnerProfile,
+  getPublicProfile,
+  updatePreferences,
+  updateProfile,
+} from "../services/profiles.js";
 
 const profilesRoutes: FastifyPluginAsync = async (app) => {
   app.post("/profiles/onboarding", { preHandler: [app.authenticate] }, async (request, reply) => {
@@ -30,6 +36,18 @@ const profilesRoutes: FastifyPluginAsync = async (app) => {
       const profile = await getOwnerProfile(request.user.id);
       if (!profile) return reply.code(404).send({ error: "Profile not found", statusCode: 404 });
       return { profile };
+    } catch (error) {
+      return handleRouteError(reply, error);
+    }
+  });
+
+  app.patch("/preferences/me", { preHandler: [app.authenticate] }, async (request, reply) => {
+    try {
+      const preferences = await updatePreferences(
+        request.user.id,
+        request.body as Record<string, unknown>,
+      );
+      return { preferences };
     } catch (error) {
       return handleRouteError(reply, error);
     }

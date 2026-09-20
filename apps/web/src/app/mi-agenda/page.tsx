@@ -1,7 +1,8 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { Cake } from "lucide-react";
-import { EventCard } from "@/components/events/EventCard";
+import { EventDayList } from "@/components/events/EventDayList";
+import { Container } from "@/components/layout/Container";
+import { PageHeader } from "@/components/layout/PageHeader";
 import { createClient } from "@/lib/supabase/server";
 import {
   getFollowingOccurrences,
@@ -9,6 +10,7 @@ import {
   getNetworkBirthdays,
 } from "@/lib/queries";
 import { formatBirthday } from "@/lib/dates";
+import { cn } from "@/lib/utils";
 
 type Props = {
   searchParams: Promise<{ tab?: string }>;
@@ -37,31 +39,20 @@ export default async function MiAgendaPage({ searchParams }: Props) {
   const events = tab === "voy" ? going : following;
 
   return (
-    <div>
-      <header className="mb-6">
-        <h1 className="text-2xl font-bold text-ink">Mi agenda</h1>
-        <p className="mt-1 text-ink-muted">Lo que seguís y a lo que vas.</p>
-      </header>
+    <Container className="py-8 sm:py-12">
+      <PageHeader title="Mi agenda" description="Lo que seguís y a lo que vas." />
 
-      <nav className="mb-6 flex gap-2" aria-label="Pestañas">
+      <nav className="mb-8 flex gap-2" aria-label="Pestañas">
         <Link
           href="/mi-agenda?tab=siguiendo"
-          className={`rounded-lg px-4 py-2 text-sm font-medium ${
-            tab !== "voy"
-              ? "bg-accent text-white"
-              : "bg-surface text-ink-muted hover:bg-canvas"
-          }`}
+          className={cn("pill", tab !== "voy" && "pill-active")}
           aria-current={tab !== "voy" ? "page" : undefined}
         >
           Siguiendo
         </Link>
         <Link
           href="/mi-agenda?tab=voy"
-          className={`rounded-lg px-4 py-2 text-sm font-medium ${
-            tab === "voy"
-              ? "bg-accent text-white"
-              : "bg-surface text-ink-muted hover:bg-canvas"
-          }`}
+          className={cn("pill", tab === "voy" && "pill-active")}
           aria-current={tab === "voy" ? "page" : undefined}
         >
           Voy
@@ -69,40 +60,39 @@ export default async function MiAgendaPage({ searchParams }: Props) {
       </nav>
 
       <section aria-label="Eventos">
-        {events.length === 0 ? (
-          <p className="text-ink-muted">
-            {tab === "voy"
-              ? "Todavía no marcaste ningún evento como «Voy»."
-              : "Seguí promotores para ver sus eventos acá."}
-          </p>
-        ) : (
-          <ul className="space-y-3">
-            {events.map((event) => (
-              <li key={event.occurrence_id}>
-                <EventCard event={event} />
-              </li>
-            ))}
-          </ul>
-        )}
+        <EventDayList
+          events={events}
+          empty={
+            <div className="rounded-2xl border border-border px-6 py-16 text-center">
+              <p className="text-pretty text-ink-muted">
+                {tab === "voy"
+                  ? "Todavía no marcaste ningún evento como «Voy»."
+                  : "Seguí promotores para ver sus eventos acá."}
+              </p>
+              <Link href="/explorar" className="btn-primary mt-6">
+                Explorar eventos
+              </Link>
+            </div>
+          }
+        />
       </section>
 
-      <section className="mt-10" aria-labelledby="birthdays-heading">
-        <h2 id="birthdays-heading" className="mb-4 flex items-center gap-2 text-lg font-semibold text-ink">
-          <Cake className="h-5 w-5 text-accent" aria-hidden />
+      <section className="mt-16" aria-labelledby="birthdays-heading">
+        <h2 id="birthdays-heading" className="mb-6 text-xl font-semibold text-ink">
           Fechas de mi red
         </h2>
         {birthdays.length === 0 ? (
-          <p className="text-sm text-ink-muted">
+          <p className="text-pretty text-sm text-ink-muted">
             Cuando sigas perfiles con cumpleaños visible, aparecerán acá (solo día y mes).
           </p>
         ) : (
-          <ul className="space-y-2">
+          <ul className="divide-y divide-border rounded-2xl border border-border">
             {birthdays.map((b) => (
-              <li key={b.profile_id} className="card flex items-center justify-between py-3">
-                <Link href={`/a/${b.slug}`} className="font-medium text-ink hover:text-accent">
+              <li key={b.profile_id} className="flex items-center justify-between px-4 py-3">
+                <Link href={`/a/${b.slug}`} className="font-medium text-ink hover:text-white">
                   {b.display_name}
                 </Link>
-                <span className="text-sm text-ink-muted">
+                <span className="text-sm tabular-nums text-ink-muted">
                   {formatBirthday(b.birthday_month, b.birthday_day)}
                 </span>
               </li>
@@ -110,6 +100,6 @@ export default async function MiAgendaPage({ searchParams }: Props) {
           </ul>
         )}
       </section>
-    </div>
+    </Container>
   );
 }

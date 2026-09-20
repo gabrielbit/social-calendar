@@ -10,6 +10,9 @@ coverage
 *.log
 .DS_Store
 .vercel
+.railway
 .supabase
+supabase/.branches
+supabase/.temp
 playwright-report
 test-results

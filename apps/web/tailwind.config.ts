@@ -5,19 +5,19 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
-        canvas: "#FAF8F5",
+        canvas: "#0C0A16",
         ink: {
-          DEFAULT: "#1C1917",
-          muted: "#57534E",
-          faint: "#78716C",
+          DEFAULT: "#F4F2FF",
+          muted: "#9B97B8",
+          faint: "#6E6A8A",
         },
         accent: {
-          DEFAULT: "#C4704B",
-          hover: "#A85A3A",
-          soft: "#F5E6DE",
+          DEFAULT: "#9B87F5",
+          hover: "#B5A6FF",
+          soft: "rgba(155, 135, 245, 0.14)",
         },
-        surface: "#FFFFFF",
-        border: "#E7E5E4",
+        surface: "#16132A",
+        border: "rgba(155, 135, 245, 0.16)",
       },
       fontFamily: {
         sans: [
@@ -27,6 +27,11 @@ const config: Config = {
           "Segoe UI",
           "sans-serif",
         ],
+      },
+      zIndex: {
+        nav: "50",
+        overlay: "40",
+        raised: "10",
       },
     },
   },

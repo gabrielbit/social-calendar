@@ -1,10 +1,14 @@
 import Link from "next/link";
-import { ArrowRight } from "lucide-react";
 import { Constellation } from "@/components/home/Constellation";
-import { getFeaturedTags } from "@/lib/queries";
+import { EventDayList } from "@/components/events/EventDayList";
+import { Container } from "@/components/layout/Container";
+import { exploreOccurrences, getFeaturedTags } from "@/lib/queries";
 
 export default async function HomePage() {
-  const tags = await getFeaturedTags(8);
+  const [tags, events] = await Promise.all([
+    getFeaturedTags(8),
+    exploreOccurrences({ limit: 12 }),
+  ]);
 
   const nodes = tags.map((t) => ({
     slug: t.slug,
@@ -13,41 +17,61 @@ export default async function HomePage() {
   }));
 
   return (
-    <div className="grid gap-12 lg:grid-cols-2 lg:items-center">
-      <section>
-        <p className="mb-3 text-sm font-medium uppercase tracking-wider text-accent">
-          Tu red, tus eventos
+    <Container className="py-8 sm:py-12">
+      <header className="mb-10 max-w-xl">
+        <p className="text-sm text-accent">Agenda pública</p>
+        <h1 className="page-title mt-2">Eventos de la comunidad</h1>
+        <p className="page-lede">
+          Descubrí eventos, seguí promotores y curá tu agenda con atribución al autor original.
         </p>
-        <h1 className="text-3xl font-bold tracking-tight text-ink sm:text-4xl lg:text-5xl">
-          Agendas públicas que se construyen en comunidad
-        </h1>
-        <p className="mt-4 max-w-lg text-lg text-ink-muted">
-          Descubrí eventos, seguí promotores y curá tu propia agenda con atribución al autor
-          original.
-        </p>
-        <div className="mt-8 flex flex-wrap gap-3">
-          <Link href="/explorar" className="btn-primary">
-            Explorar eventos
-            <ArrowRight className="h-4 w-4" aria-hidden />
-          </Link>
-          <Link href="/auth/login" className="btn-secondary">
+        <div className="mt-6 flex flex-wrap gap-2">
+          <Link href="/auth/login" className="btn-primary">
             Crear mi agenda
           </Link>
+          <Link href="/explorar" className="btn-secondary">
+            Explorar
+          </Link>
         </div>
+      </header>
+
+      <section aria-label="Próximos eventos">
+        <EventDayList
+          events={events}
+          empty={
+            <div className="rounded-2xl border border-border px-6 py-16 text-center">
+              <p className="text-pretty text-ink-muted">Todavía no hay eventos publicados.</p>
+              <Link href="/events/new" className="btn-primary mt-6">
+                Crear evento
+              </Link>
+            </div>
+          }
+        />
+        {events.length > 0 ? (
+          <p className="mt-10">
+            <Link href="/explorar" className="text-sm text-ink-muted hover:text-ink">
+              Ver todos los eventos
+            </Link>
+          </p>
+        ) : null}
       </section>
 
-      <section aria-labelledby="constellation-heading">
-        <h2 id="constellation-heading" className="sr-only">
-          Tags y promotores destacados
-        </h2>
+      <section className="mt-16 pb-8" aria-labelledby="constellation-heading">
+        <div className="mb-6 max-w-lg">
+          <h2 id="constellation-heading" className="text-xl font-semibold text-ink">
+            La red
+          </h2>
+          <p className="mt-2 text-pretty text-ink-muted">
+            Tags y comunidades que están moviendo la agenda.
+          </p>
+        </div>
         {nodes.length > 0 ? (
           <Constellation nodes={nodes} />
         ) : (
-          <div className="card flex aspect-[4/3] items-center justify-center text-ink-muted">
+          <div className="flex aspect-[16/10] items-center justify-center rounded-2xl border border-border text-ink-muted">
             Pronto: constelación de tags
           </div>
         )}
       </section>
-    </div>
+    </Container>
   );
 }

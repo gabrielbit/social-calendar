@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { CreateProfileSchema, ProfileTypeSchema } from "@agenda/domain";
 import { clientApiPost } from "@/lib/api-client";
+import { Container } from "@/components/layout/Container";
 
 const PROFILE_TYPES = ProfileTypeSchema.options;
 
@@ -69,15 +70,16 @@ export default function OnboardingPage() {
   }
 
   return (
+    <Container className="py-10 sm:py-14">
     <div className="mx-auto max-w-lg">
-      <h1 className="text-2xl font-bold text-ink">Configurá tu perfil</h1>
-      <p className="mt-2 text-ink-muted">
+      <h1 className="page-title">Configurá tu perfil</h1>
+      <p className="page-lede">
         Tu agenda pública empieza acá. El cumpleaños es opcional (solo día y mes, nunca el año).
       </p>
 
-      <form onSubmit={handleSubmit} className="card mt-6 space-y-4">
+      <form onSubmit={handleSubmit} className="mt-8 space-y-4">
         <label className="block text-sm">
-          <span className="font-medium text-ink-muted">Nombre para mostrar</span>
+          <span className="text-ink-muted">Nombre para mostrar</span>
           <input
             required
             className="input-field mt-1"
@@ -90,7 +92,7 @@ export default function OnboardingPage() {
         </label>
 
         <label className="block text-sm">
-          <span className="font-medium text-ink-muted">Slug (URL)</span>
+          <span className="text-ink-muted">Slug (URL)</span>
           <div className="mt-1 flex items-center gap-1 text-sm text-ink-faint">
             <span>/a/</span>
             <input
@@ -104,7 +106,7 @@ export default function OnboardingPage() {
         </label>
 
         <label className="block text-sm">
-          <span className="font-medium text-ink-muted">Tipo de perfil</span>
+          <span className="text-ink-muted">Tipo de perfil</span>
           <select
             className="input-field mt-1"
             value={profileType}
@@ -119,7 +121,7 @@ export default function OnboardingPage() {
         </label>
 
         <fieldset className="text-sm">
-          <legend className="font-medium text-ink-muted">Cumpleaños (opcional)</legend>
+          <legend className="text-ink-muted">Cumpleaños (opcional)</legend>
           <div className="mt-2 flex gap-3">
             <label className="flex-1">
               <span className="sr-only">Mes</span>
@@ -155,7 +157,7 @@ export default function OnboardingPage() {
         </fieldset>
 
         {error && (
-          <p className="text-sm text-red-600" role="alert">
+          <p className="text-sm text-red-400" role="alert">
             {error}
           </p>
         )}
@@ -165,5 +167,6 @@ export default function OnboardingPage() {
         </button>
       </form>
     </div>
+    </Container>
   );
 }

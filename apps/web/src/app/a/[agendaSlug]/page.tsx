@@ -1,18 +1,31 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
-import { Calendar, Users } from "lucide-react";
 import { AgendaCalendar } from "@/components/calendar/AgendaCalendar";
-import { EventCard } from "@/components/events/EventCard";
-import { formatBirthday } from "@/lib/dates";
+import { MiniMonth } from "@/components/calendar/MiniMonth";
+import { EventDayList } from "@/components/events/EventDayList";
+import { FollowButton } from "@/components/agenda/FollowButton";
+import { ShareBar } from "@/components/agenda/ShareBar";
+import { ViewSwitcher, parseVista } from "@/components/agenda/ViewSwitcher";
+import { AgendaSources } from "@/components/agenda/AgendaSources";
+import { Container } from "@/components/layout/Container";
+import { occurrenceToExplore, sourcesFromOccurrences } from "@/lib/events";
+import { eventDayKey, formatBirthday } from "@/lib/dates";
+import { profileTypeLabel } from "@/lib/labels";
+import { createClient } from "@/lib/supabase/server";
 import {
   getAgendaOccurrences,
+  getIsFollowing,
   getPrimaryAgendaId,
   getProfileBySlug,
+  getProfileSocialStats,
 } from "@/lib/queries";
 import type { Metadata } from "next";
 
-type Props = { params: Promise<{ agendaSlug: string }> };
+type Props = {
+  params: Promise<{ agendaSlug: string }>;
+  searchParams: Promise<{ vista?: string }>;
+};
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { agendaSlug } = await params;
@@ -24,8 +37,11 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   };
 }
 
-export default async function AgendaPage({ params }: Props) {
+export default async function AgendaPage({ params, searchParams }: Props) {
   const { agendaSlug } = await params;
+  const { vista: vistaParam } = await searchParams;
+  const vista = parseVista(vistaParam);
+
   const profile = await getProfileBySlug(agendaSlug);
   if (!profile) notFound();
 
@@ -37,104 +53,131 @@ export default async function AgendaPage({ params }: Props) {
   const to = new Date();
   to.setMonth(to.getMonth() + 6);
 
-  const occurrences = await getAgendaOccurrences(
-    agendaId,
-    from.toISOString(),
-    to.toISOString(),
-  );
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
 
-  const attributed = occurrences.filter((o) => o.inclusion_reason !== "own");
-  const mobileEvents = occurrences.map((o) => ({
-    occurrence_id: o.occurrence_id,
-    title: o.title,
-    starts_at: o.starts_at,
-    ends_at: o.ends_at,
-    all_day: o.all_day,
-    timezone: o.timezone,
-    cover_image_url: o.cover_image_url,
-    author_slug: o.original_promoter_slug,
-    author_name: o.original_promoter_name,
-    zone: null,
-    tag_slugs: [] as string[],
-  }));
+  const [occurrences, stats, following] = await Promise.all([
+    getAgendaOccurrences(agendaId, from.toISOString(), to.toISOString()),
+    getProfileSocialStats(profile.id),
+    getIsFollowing(profile.id, user?.id),
+  ]);
+
+  const ownCount = occurrences.filter((o) => o.inclusion_reason === "own").length;
+  const curatedCount = occurrences.length - ownCount;
+  const events = occurrences.map(occurrenceToExplore);
+  const sources = sourcesFromOccurrences(occurrences, agendaSlug);
+  const eventDays = [...new Set(occurrences.map((o) => eventDayKey(o.starts_at, o.timezone)))];
+  const isOwn = user?.id === profile.id;
+  const showSidebar = vista === "mes";
+  const showList = vista !== "calendario";
+
+  const statsItems = [
+    { label: "seguidores", value: stats.followers },
+    { label: "propios", value: ownCount },
+    curatedCount > 0 ? { label: "curados", value: curatedCount } : null,
+    stats.republishers > 0 ? { label: "agendas", value: stats.republishers } : null,
+  ].filter((item): item is { label: string; value: number } => item !== null);
 
   return (
-    <div>
+    <Container className="py-8 sm:py-12">
       <header className="mb-8">
-        <div className="flex items-start gap-4">
+        <div className="flex items-start gap-4 sm:gap-5">
           {profile.avatar_url ? (
-            <div className="relative h-16 w-16 shrink-0 overflow-hidden rounded-full">
-              <Image src={profile.avatar_url} alt="" fill className="object-cover" sizes="64px" />
+            <div className="relative size-16 shrink-0 overflow-hidden rounded-2xl sm:size-20">
+              <Image src={profile.avatar_url} alt="" fill className="object-cover" sizes="80px" />
             </div>
           ) : (
-            <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-full bg-accent-soft text-xl font-bold text-accent">
+            <div className="flex size-16 shrink-0 items-center justify-center rounded-2xl bg-surface text-xl text-accent sm:size-20">
               {profile.display_name.charAt(0)}
             </div>
           )}
-          <div>
-            <h1 className="text-2xl font-bold text-ink">{profile.display_name}</h1>
-            <p className="text-sm capitalize text-ink-muted">{profile.profile_type}</p>
-            {profile.public_location && (
-              <p className="mt-1 text-sm text-ink-faint">{profile.public_location}</p>
-            )}
-            {profile.bio && <p className="mt-3 max-w-xl text-ink-muted">{profile.bio}</p>}
-            {profile.birthday_month && profile.birthday_day && (
+          <div className="min-w-0">
+            <h1 className="page-title">{profile.display_name}</h1>
+            <p className="mt-1 text-sm text-ink-muted">
+              {profileTypeLabel(profile.profile_type)}
+              {profile.public_location ? ` · ${profile.public_location}` : ""}
+            </p>
+            {profile.bio ? <p className="mt-3 max-w-xl text-pretty text-ink-muted">{profile.bio}</p> : null}
+            {profile.birthday_month && profile.birthday_day ? (
               <p className="mt-2 text-sm text-ink-faint">
-                🎂 {formatBirthday(profile.birthday_month, profile.birthday_day)}
+                {formatBirthday(profile.birthday_month, profile.birthday_day)}
               </p>
-            )}
+            ) : null}
           </div>
         </div>
 
-        <div className="mt-4 flex flex-wrap gap-4 text-sm text-ink-muted">
-          <span className="inline-flex items-center gap-1">
-            <Calendar className="h-4 w-4" aria-hidden />
-            {occurrences.length} eventos próximos
-          </span>
-          {attributed.length > 0 && (
-            <span className="inline-flex items-center gap-1">
-              <Users className="h-4 w-4" aria-hidden />
-              {attributed.length} con atribución
-            </span>
+        <dl className="mt-6 flex flex-wrap gap-x-6 gap-y-2 text-sm">
+          {statsItems.map((item) => (
+            <div key={item.label} className="flex items-baseline gap-1.5">
+              <dt className="sr-only">{item.label}</dt>
+                <dd className="font-medium tabular-nums text-ink">
+                  {item.value} <span className="font-normal text-ink-muted">{item.label}</span>
+                </dd>
+            </div>
+          ))}
+        </dl>
+
+        <div className="mt-5 flex flex-wrap items-center gap-2">
+          {isOwn ? (
+            <Link href="/settings" className="btn-secondary">
+              Editar perfil
+            </Link>
+          ) : (
+            <FollowButton
+              profileId={profile.id}
+              agendaSlug={agendaSlug}
+              initialFollowing={following}
+              loggedIn={Boolean(user)}
+            />
           )}
+          <ShareBar
+            title={profile.display_name}
+            path={`/a/${agendaSlug}`}
+            events={occurrences.map((o) => ({
+              occurrenceId: o.occurrence_id,
+              title: o.title,
+              startsAt: o.starts_at,
+              endsAt: o.ends_at,
+              allDay: o.all_day,
+              timezone: o.timezone,
+            }))}
+          />
         </div>
       </header>
 
-      {attributed.length > 0 && (
-        <section className="mb-6 rounded-lg border border-accent/20 bg-accent-soft/50 p-3 text-sm text-ink-muted">
-          <p className="font-medium text-ink">Atribución</p>
-          <p className="mt-1">
-            Esta agenda incluye eventos curados de otros promotores, siempre con crédito al autor
-            original.
-          </p>
-        </section>
-      )}
+      <div className="mb-8">
+        <ViewSwitcher slug={agendaSlug} current={vista} />
+      </div>
 
-      <AgendaCalendar occurrences={occurrences} agendaSlug={agendaSlug} />
+      <div className={showSidebar ? "grid gap-8 lg:grid-cols-[minmax(0,1fr)_16rem]" : undefined}>
+        <div>
+          {showList ? (
+            <EventDayList
+              events={events}
+              hrefFor={(event) => `/a/${agendaSlug}/e/${event.occurrence_id}`}
+              empty={
+                <div className="rounded-2xl border border-border px-6 py-16 text-center">
+                  <p className="text-pretty text-ink-muted">No hay eventos en este rango.</p>
+                  <Link href="/explorar" className="btn-secondary mt-6">
+                    Explorar eventos
+                  </Link>
+                </div>
+              }
+            />
+          ) : (
+            <AgendaCalendar occurrences={occurrences} agendaSlug={agendaSlug} />
+          )}
+        </div>
 
-      <section className="mt-6 md:hidden" aria-label="Lista de eventos">
-        <h2 className="mb-4 text-lg font-semibold text-ink">Próximos eventos</h2>
-        {mobileEvents.length === 0 ? (
-          <p className="text-ink-muted">No hay eventos en este rango.</p>
-        ) : (
-          <ul className="space-y-3">
-            {mobileEvents.map((ev) => (
-              <li key={ev.occurrence_id}>
-                <EventCard
-                  event={ev}
-                  href={`/a/${agendaSlug}/e/${ev.occurrence_id}`}
-                />
-              </li>
-            ))}
-          </ul>
-        )}
-      </section>
-
-      <p className="mt-8 text-center">
-        <Link href={`/explorar`} className="text-sm text-accent hover:underline">
-          Explorar más eventos →
-        </Link>
-      </p>
-    </div>
+        {showSidebar ? (
+          <aside className="space-y-4 lg:sticky lg:top-20 lg:self-start">
+            <MiniMonth eventDays={eventDays} />
+            <AgendaSources sources={sources} />
+          </aside>
+        ) : null}
+      </div>
+    </Container>
   );
 }

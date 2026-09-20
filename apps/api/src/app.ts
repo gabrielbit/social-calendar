@@ -1,7 +1,7 @@
 import cors from "@fastify/cors";
 import sensible from "@fastify/sensible";
 import Fastify, { type FastifyServerOptions } from "fastify";
-import { env } from "./config.js";
+import { corsOrigins, env } from "./config.js";
 import authPlugin from "./plugins/auth.js";
 import activityRoutes from "./routes/activity.js";
 import calendarRoutes from "./routes/calendar.js";
@@ -21,8 +21,10 @@ export async function buildApp(opts: FastifyServerOptions = {}) {
 
   await app.register(sensible);
   await app.register(cors, {
-    origin: env.CORS_ORIGIN.split(",").map((value) => value.trim()),
+    origin: corsOrigins(env.CORS_ORIGIN),
     credentials: true,
+    methods: ["GET", "HEAD", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+    allowedHeaders: ["Authorization", "Content-Type", "Accept"],
   });
   await app.register(authPlugin);
 

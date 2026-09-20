@@ -1,5 +1,6 @@
 import { notFound } from "next/navigation";
 import { EventDetailView } from "@/components/events/EventDetailView";
+import { Container } from "@/components/layout/Container";
 import { getOccurrenceDetail } from "@/lib/queries";
 import { appUrl } from "@/lib/dates";
 import type { Metadata } from "next";
@@ -94,7 +95,9 @@ export default async function CanonicalEventPage({ params }: Props) {
           dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
         />
       )}
+      <Container className="py-10 sm:py-14">
       <EventDetailView occurrence={occurrence} />
+      </Container>
     </>
   );
 }

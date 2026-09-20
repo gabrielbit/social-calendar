@@ -323,3 +323,37 @@ export async function getSitemapOccurrences(): Promise<
     starts_at: (o as { starts_at: string }).starts_at,
   }));
 }
+
+export async function getProfileSocialStats(profileId: string): Promise<{
+  followers: number;
+  republishers: number;
+}> {
+  const supabase = await createClient();
+  const [{ count: followers }, { count: republishers }] = await Promise.all([
+    supabase
+      .from("follows")
+      .select("follower_id", { count: "exact", head: true })
+      .eq("following_id", profileId),
+    supabase
+      .from("agenda_sources")
+      .select("id", { count: "exact", head: true })
+      .eq("source_profile_id", profileId)
+      .eq("enabled", true),
+  ]);
+  return { followers: followers ?? 0, republishers: republishers ?? 0 };
+}
+
+export async function getIsFollowing(
+  profileId: string,
+  viewerId: string | undefined,
+): Promise<boolean> {
+  if (!viewerId) return false;
+  const supabase = await createClient();
+  const { data } = await supabase
+    .from("follows")
+    .select("follower_id")
+    .eq("follower_id", viewerId)
+    .eq("following_id", profileId)
+    .maybeSingle();
+  return Boolean(data);
+}

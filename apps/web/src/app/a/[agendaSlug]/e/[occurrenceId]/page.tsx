@@ -1,5 +1,6 @@
 import { notFound } from "next/navigation";
 import { EventDetailView } from "@/components/events/EventDetailView";
+import { Container } from "@/components/layout/Container";
 import { getOccurrenceDetail, getProfileBySlug } from "@/lib/queries";
 import type { Metadata } from "next";
 import { appUrl } from "@/lib/dates";
@@ -28,16 +29,16 @@ export default async function ContextualEventPage({ params }: Props) {
   if (!profile || !occurrence || occurrence.cancelled) notFound();
 
   return (
-    <div>
-      <p className="mb-4 text-sm text-ink-faint">
+    <Container className="py-10 sm:py-14">
+      <p className="mb-6 text-sm text-ink-faint">
         Evento en la agenda de{" "}
-        <span className="font-medium text-ink">{profile.display_name}</span>
+        <span className="text-ink">{profile.display_name}</span>
       </p>
       <EventDetailView
         occurrence={occurrence}
         agendaSlug={agendaSlug}
         showCanonicalLink
       />
-    </div>
+    </Container>
   );
 }

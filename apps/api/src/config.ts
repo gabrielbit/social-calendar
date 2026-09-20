@@ -60,6 +60,26 @@ function parseEnv(): Env {
 
 export const env = parseEnv();
 
+export function corsOrigins(raw: string): string[] {
+  const origins = raw.split(",").map((value) => value.trim()).filter(Boolean);
+  const expanded: string[] = [];
+  for (const origin of origins) {
+    expanded.push(origin);
+    try {
+      const url = new URL(origin);
+      const port = url.port ? `:${url.port}` : "";
+      if (url.hostname === "localhost") {
+        expanded.push(`${url.protocol}//127.0.0.1${port}`);
+      } else if (url.hostname === "127.0.0.1") {
+        expanded.push(`${url.protocol}//localhost${port}`);
+      }
+    } catch {
+      // ignore malformed origin entries
+    }
+  }
+  return [...new Set(expanded)];
+}
+
 export function assertGoogleCalendarConfigured(): void {
   if (!env.GOOGLE_CLIENT_ID || !env.GOOGLE_CLIENT_SECRET || !env.GOOGLE_TOKEN_ENCRYPTION_KEY) {
     throw Object.assign(

@@ -2,7 +2,7 @@
 
 import { useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useTransition } from "react";
-import { Search } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 type ExploreFiltersProps = {
   tags: { slug: string; name: string }[];
@@ -32,63 +32,69 @@ export function ExploreFilters({ tags }: ExploreFiltersProps) {
 
   return (
     <form
-      className="card grid gap-3 sm:grid-cols-2 lg:grid-cols-4"
+      className="space-y-5"
       onSubmit={(e) => e.preventDefault()}
       aria-busy={pending}
     >
-      <label className="flex flex-col gap-1 text-sm">
-        <span className="font-medium text-ink-muted">Desde</span>
-        <input
-          type="date"
-          className="input-field"
-          value={from ? from.slice(0, 10) : ""}
-          onChange={(e) =>
-            update("from", e.target.value ? `${e.target.value}T00:00:00-03:00` : "")
-          }
-        />
-      </label>
-      <label className="flex flex-col gap-1 text-sm">
-        <span className="font-medium text-ink-muted">Hasta</span>
-        <input
-          type="date"
-          className="input-field"
-          value={to ? to.slice(0, 10) : ""}
-          onChange={(e) =>
-            update("to", e.target.value ? `${e.target.value}T23:59:59-03:00` : "")
-          }
-        />
-      </label>
-      <label className="flex flex-col gap-1 text-sm">
-        <span className="font-medium text-ink-muted">Tag</span>
-        <select
-          className="input-field"
-          value={tag}
-          onChange={(e) => update("tag", e.target.value)}
-        >
-          <option value="">Todos</option>
-          {tags.map((t) => (
-            <option key={t.slug} value={t.slug}>
-              {t.name}
-            </option>
-          ))}
-        </select>
-      </label>
-      <label className="flex flex-col gap-1 text-sm">
-        <span className="font-medium text-ink-muted">Zona</span>
-        <div className="relative">
-          <Search
-            className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-ink-faint"
-            aria-hidden
+      <div className="grid gap-3 sm:grid-cols-3">
+        <label className="flex flex-col gap-1.5 text-sm">
+          <span className="text-ink-muted">Desde</span>
+          <input
+            type="date"
+            className="input-field"
+            value={from ? from.slice(0, 10) : ""}
+            onChange={(e) =>
+              update("from", e.target.value ? `${e.target.value}T00:00:00-03:00` : "")
+            }
           />
+        </label>
+        <label className="flex flex-col gap-1.5 text-sm">
+          <span className="text-ink-muted">Hasta</span>
+          <input
+            type="date"
+            className="input-field"
+            value={to ? to.slice(0, 10) : ""}
+            onChange={(e) =>
+              update("to", e.target.value ? `${e.target.value}T23:59:59-03:00` : "")
+            }
+          />
+        </label>
+        <label className="flex flex-col gap-1.5 text-sm">
+          <span className="text-ink-muted">Zona</span>
           <input
             type="search"
-            className="input-field pl-9"
+            className="input-field"
             placeholder="Palermo, Centro…"
             value={zone}
             onChange={(e) => update("zone", e.target.value)}
           />
+        </label>
+      </div>
+
+      {tags.length > 0 ? (
+        <div className="flex flex-wrap gap-2" role="group" aria-label="Tags">
+          <button
+            type="button"
+            onClick={() => update("tag", "")}
+            className={cn("pill", tag === "" && "pill-active bg-ink text-canvas")}
+          >
+            Todos
+          </button>
+          {tags.slice(0, 16).map((t) => (
+            <button
+              type="button"
+              key={t.slug}
+              onClick={() => update("tag", tag === t.slug ? "" : t.slug)}
+              className={cn(
+                "pill",
+                tag === t.slug && "pill-active bg-ink text-canvas",
+              )}
+            >
+              {t.name}
+            </button>
+          ))}
         </div>
-      </label>
+      ) : null}
     </form>
   );
 }

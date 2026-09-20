@@ -1,10 +1,9 @@
 "use client";
 
+import { apiUrl } from "@/lib/api-url";
 import { createClient } from "@/lib/supabase/client";
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3001";
-
-export async function clientApiPost<T>(path: string, json: unknown): Promise<T> {
+async function clientApiRequest<T>(method: string, path: string, json?: unknown): Promise<T> {
   const supabase = createClient();
   const {
     data: { session },
@@ -12,28 +11,57 @@ export async function clientApiPost<T>(path: string, json: unknown): Promise<T> 
 
   const headers: Record<string, string> = {
     Accept: "application/json",
-    "Content-Type": "application/json",
   };
+  if (json !== undefined) {
+    headers["Content-Type"] = "application/json";
+  }
   if (session?.access_token) {
     headers.Authorization = `Bearer ${session.access_token}`;
   }
 
-  const res = await fetch(`${API_URL}${path.startsWith("/") ? path : `/${path}`}`, {
-    method: "POST",
+  const res = await fetch(apiUrl(path), {
+    method,
     headers,
-    body: JSON.stringify(json),
+    body: json === undefined ? undefined : JSON.stringify(json),
   });
 
   const text = await res.text();
-  const parsed = text ? (JSON.parse(text) as unknown) : null;
+  let parsed: unknown = null;
+  if (text) {
+    try {
+      parsed = JSON.parse(text) as unknown;
+    } catch {
+      parsed = { error: text };
+    }
+  }
 
   if (!res.ok) {
     const message =
-      typeof parsed === "object" && parsed && "message" in parsed
-        ? String((parsed as { message: string }).message)
+      typeof parsed === "object" && parsed && "error" in parsed
+        ? String((parsed as { error: string }).error)
         : res.statusText;
     throw new Error(message);
   }
 
   return parsed as T;
+}
+
+export async function clientApiPost<T>(path: string, json: unknown): Promise<T> {
+  return clientApiRequest<T>("POST", path, json);
+}
+
+export async function clientApiGet<T>(path: string): Promise<T> {
+  return clientApiRequest<T>("GET", path);
+}
+
+export async function clientApiPatch<T>(path: string, json: unknown): Promise<T> {
+  return clientApiRequest<T>("PATCH", path, json);
+}
+
+export async function clientApiPut<T>(path: string, json: unknown): Promise<T> {
+  return clientApiRequest<T>("PUT", path, json);
+}
+
+export async function clientApiDelete<T>(path: string): Promise<T> {
+  return clientApiRequest<T>("DELETE", path);
 }
