@@ -107,7 +107,7 @@ export async function exploreOccurrences(opts: {
     opts.to ?? new Date(Date.now() + 90 * 86400000).toISOString();
   const limit = opts.limit ?? 40;
 
-  let query = supabase
+  const query = supabase
     .from("event_occurrences")
     .select(
       `
