@@ -6,6 +6,14 @@ import { createClient } from "@/lib/supabase/client";
 async function clientApiRequest<T>(method: string, path: string, json?: unknown): Promise<T> {
   const supabase = createClient();
   const {
+    data: { user },
+    error: userError,
+  } = await supabase.auth.getUser();
+  if (userError || !user) {
+    throw new Error("Tenés que iniciar sesión");
+  }
+
+  const {
     data: { session },
   } = await supabase.auth.getSession();
 

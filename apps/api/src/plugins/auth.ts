@@ -18,6 +18,7 @@ const authPlugin: FastifyPluginAsync = async (app) => {
 
     const { data, error } = await supabase.auth.getUser(jwt);
     if (error || !data.user) {
+      request.log.warn({ err: error?.message }, "JWT rejected");
       return reply.code(401).send({ error: "Invalid or expired token", statusCode: 401 });
     }
 
