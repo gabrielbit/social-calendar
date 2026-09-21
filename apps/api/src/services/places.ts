@@ -1,5 +1,10 @@
 import { assertGoogleMapsConfigured, env } from "../config.js";
 
+function mapsReferer(): string {
+  const raw = env.GOOGLE_MAPS_HTTP_REFERER || env.APP_URL;
+  return raw.endsWith("/") ? raw : `${raw}/`;
+}
+
 export type PlaceSuggestion = {
   placeId: string;
   label: string;
@@ -46,6 +51,7 @@ async function autocompletePlacesNew(input: string): Promise<PlaceSuggestion[]> 
       "Content-Type": "application/json",
       "X-Goog-Api-Key": env.GOOGLE_MAPS_API_KEY!,
       "X-Goog-FieldMask": "suggestions.placePrediction.placeId,suggestions.placePrediction.text",
+      Referer: mapsReferer(),
     },
     body: JSON.stringify({
       input,
@@ -76,7 +82,7 @@ async function geocodePlaces(input: string): Promise<PlaceSuggestion[]> {
   url.searchParams.set("language", "es");
   url.searchParams.set("region", "ar");
 
-  const res = await fetch(url);
+  const res = await fetch(url, { headers: { Referer: mapsReferer() } });
   const json = (await res.json()) as GeocodeResponse;
   if (!res.ok || (json.status !== "OK" && json.status !== "ZERO_RESULTS")) {
     throw Object.assign(

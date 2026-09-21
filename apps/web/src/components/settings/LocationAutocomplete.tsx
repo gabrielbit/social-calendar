@@ -104,32 +104,34 @@ export function LocationAutocomplete({
 
   return (
     <div ref={rootRef} className="relative mt-1">
-      <span className="pointer-events-none absolute left-3 top-1/2 z-10 -translate-y-1/2 text-ink-faint">
-        <MapPin className="size-4" aria-hidden />
-      </span>
-      <input
-        id={id}
-        name={name}
-        type="text"
-        className="input-field pl-9"
-        value={value}
-        autoComplete="off"
-        spellCheck={false}
-        placeholder={placeholder}
-        role="combobox"
-        aria-expanded={open}
-        aria-controls={listId}
-        aria-autocomplete="list"
-        aria-activedescendant={open ? `${listId}-${active}` : undefined}
-        onChange={(event) => {
-          onChange(event.target.value);
-          scheduleSearch(event.target.value);
-        }}
-        onFocus={() => {
-          if (suggestions.length > 0) setOpen(true);
-        }}
-        onKeyDown={onKeyDown}
-      />
+      <div className="relative">
+        <span className="pointer-events-none absolute inset-y-0 left-3 z-10 flex items-center text-ink-faint">
+          <MapPin className="size-4" aria-hidden />
+        </span>
+        <input
+          id={id}
+          name={name}
+          type="text"
+          className="input-field pl-9"
+          value={value}
+          autoComplete="off"
+          spellCheck={false}
+          placeholder={placeholder}
+          role="combobox"
+          aria-expanded={open}
+          aria-controls={listId}
+          aria-autocomplete="list"
+          aria-activedescendant={open ? `${listId}-${active}` : undefined}
+          onChange={(event) => {
+            onChange(event.target.value);
+            scheduleSearch(event.target.value);
+          }}
+          onFocus={() => {
+            if (suggestions.length > 0) setOpen(true);
+          }}
+          onKeyDown={onKeyDown}
+        />
+      </div>
       {open && suggestions.length > 0 ? (
         <ul
           id={listId}

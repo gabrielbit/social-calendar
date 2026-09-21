@@ -41,6 +41,7 @@ const EnvSchema = z.object({
   GOOGLE_CLIENT_SECRET: z.string().min(1).optional(),
   GOOGLE_TOKEN_ENCRYPTION_KEY: z.string().min(16).optional(),
   GOOGLE_MAPS_API_KEY: z.string().min(1).optional(),
+  GOOGLE_MAPS_HTTP_REFERER: z.string().url().optional(),
   APP_URL: z.string().url(),
   CORS_ORIGIN: z.string().min(1),
 });
