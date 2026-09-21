@@ -2,9 +2,12 @@
 
 import { useState, useTransition } from "react";
 import Link from "next/link";
-import { Calendar, Save } from "lucide-react";
+import { LogOut, Save } from "lucide-react";
 import { BirthdayVisibilitySchema } from "@agenda/domain";
 import { clientApiGet, clientApiPatch } from "@/lib/api-client";
+import { createClient } from "@/lib/supabase/client";
+import { GoogleCalendarIcon } from "@/components/icons/GoogleCalendarIcon";
+import { LocationAutocomplete } from "@/components/settings/LocationAutocomplete";
 
 type SettingsFormProps = {
   profile?: {
@@ -15,6 +18,10 @@ type SettingsFormProps = {
     birthday_day: number | null;
     birthday_visibility: string;
     public_location: string | null;
+    instagram_handle: string | null;
+    whatsapp_phone: string | null;
+    contact_email: string | null;
+    allow_contact: boolean;
   };
   prefs?: {
     home_zone: string | null;
@@ -34,6 +41,10 @@ export function SettingsForm({ profile, prefs, googleConnected }: SettingsFormPr
   const [displayName, setDisplayName] = useState(profile?.display_name ?? "");
   const [bio, setBio] = useState(profile?.bio ?? "");
   const [publicLocation, setPublicLocation] = useState(profile?.public_location ?? "");
+  const [allowContact, setAllowContact] = useState(profile?.allow_contact ?? true);
+  const [instagramHandle, setInstagramHandle] = useState(profile?.instagram_handle ?? "");
+  const [whatsappPhone, setWhatsappPhone] = useState(profile?.whatsapp_phone ?? "");
+  const [contactEmail, setContactEmail] = useState(profile?.contact_email ?? "");
   const [birthdayMonth, setBirthdayMonth] = useState(String(profile?.birthday_month ?? ""));
   const [birthdayDay, setBirthdayDay] = useState(String(profile?.birthday_day ?? ""));
   const [birthdayVisibility, setBirthdayVisibility] = useState(
@@ -45,6 +56,14 @@ export function SettingsForm({ profile, prefs, googleConnected }: SettingsFormPr
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
+
+  function handleLogout() {
+    startTransition(async () => {
+      const supabase = createClient();
+      await supabase.auth.signOut();
+      window.location.href = "/auth/login";
+    });
+  }
 
   function handleGoogleConnect() {
     startTransition(async () => {
@@ -72,6 +91,10 @@ export function SettingsForm({ profile, prefs, googleConnected }: SettingsFormPr
           birthdayMonth: birthdayMonth ? Number(birthdayMonth) : null,
           birthdayDay: birthdayDay ? Number(birthdayDay) : null,
           birthdayVisibility,
+          allowContact,
+          instagramHandle: instagramHandle || null,
+          whatsappPhone: whatsappPhone || null,
+          contactEmail: contactEmail || null,
         });
         await clientApiPatch("/preferences/me", {
           homeZone: homeZone || undefined,
@@ -114,14 +137,61 @@ export function SettingsForm({ profile, prefs, googleConnected }: SettingsFormPr
         />
       </label>
 
-      <label className="block text-sm">
+      <div className="text-sm">
         <span className="text-ink-muted">Ubicación pública</span>
-        <input
-          className="input-field mt-1"
-          value={publicLocation}
-          onChange={(e) => setPublicLocation(e.target.value)}
-        />
-      </label>
+        <LocationAutocomplete value={publicLocation} onChange={setPublicLocation} />
+      </div>
+
+      <fieldset className="space-y-3 text-sm">
+        <legend className="text-ink-muted">Contacto</legend>
+        <label className="flex items-center gap-2">
+          <input
+            type="checkbox"
+            checked={allowContact}
+            onChange={(e) => setAllowContact(e.target.checked)}
+          />
+          Quiero que me contacten
+        </label>
+        <p className="text-pretty text-xs text-ink-faint">
+          Estos datos se usan por defecto en tus eventos. En cada evento podés cambiarlos o
+          apagarlos.
+        </p>
+        <label className="block">
+          <span className="text-ink-muted">Instagram</span>
+          <input
+            className="input-field mt-1"
+            value={instagramHandle}
+            onChange={(e) => setInstagramHandle(e.target.value)}
+            placeholder="@usuario"
+            autoComplete="off"
+            disabled={!allowContact}
+          />
+        </label>
+        <label className="block">
+          <span className="text-ink-muted">WhatsApp</span>
+          <input
+            className="input-field mt-1"
+            value={whatsappPhone}
+            onChange={(e) => setWhatsappPhone(e.target.value)}
+            placeholder="+54 9 11 1234-5678"
+            inputMode="tel"
+            autoComplete="tel"
+            disabled={!allowContact}
+          />
+        </label>
+        <label className="block">
+          <span className="text-ink-muted">Email de contacto</span>
+          <input
+            type="email"
+            className="input-field mt-1"
+            value={contactEmail}
+            onChange={(e) => setContactEmail(e.target.value)}
+            placeholder="hola@ejemplo.com"
+            autoComplete="email"
+            disabled={!allowContact}
+          />
+        </label>
+      </fieldset>
 
       <fieldset className="text-sm">
         <legend className="text-ink-muted">Cumpleaños (día y mes)</legend>
@@ -206,8 +276,8 @@ export function SettingsForm({ profile, prefs, googleConnected }: SettingsFormPr
           onClick={handleGoogleConnect}
           className="btn-secondary mt-3 text-sm"
         >
-          <Calendar className="h-4 w-4" aria-hidden />
-          {googleConnected ? "Reconectar Google" : "Conectar Google Calendar"}
+          <GoogleCalendarIcon className="size-4" />
+          {googleConnected ? "Reconectar Google Calendar" : "Conectar Google Calendar"}
         </button>
       </div>
 
@@ -225,6 +295,15 @@ export function SettingsForm({ profile, prefs, googleConnected }: SettingsFormPr
       <button type="submit" disabled={pending} className="btn-primary w-full">
         <Save className="h-4 w-4" aria-hidden />
         {pending ? "Guardando…" : "Guardar cambios"}
+      </button>
+      <button
+        type="button"
+        disabled={pending}
+        onClick={handleLogout}
+        className="btn-secondary w-full"
+      >
+        <LogOut className="h-4 w-4" aria-hidden />
+        Cerrar sesión
       </button>
     </form>
   );

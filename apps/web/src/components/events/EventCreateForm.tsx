@@ -11,10 +11,24 @@ const VISIBILITIES = [
   { value: "public", label: "Público — otros pueden sumarlo a su agenda" },
 ] as const;
 
-export function EventCreateForm() {
+type EventCreateFormProps = {
+  defaultDate?: string;
+  defaultContact?: {
+    allowContact: boolean;
+    instagram: string;
+    whatsapp: string;
+    email: string;
+  };
+};
+
+export function EventCreateForm({ defaultDate, defaultContact }: EventCreateFormProps) {
   const router = useRouter();
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [allowContact, setAllowContact] = useState(defaultContact?.allowContact ?? true);
+  const [contactInstagram, setContactInstagram] = useState(defaultContact?.instagram ?? "");
+  const [contactWhatsapp, setContactWhatsapp] = useState(defaultContact?.whatsapp ?? "");
+  const [contactEmail, setContactEmail] = useState(defaultContact?.email ?? "");
 
   async function onSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -55,6 +69,10 @@ export function EventCreateForm() {
       linkedBirthday: fd.get("linkedBirthday") === "on",
       galleryUrls: [],
       language: "es",
+      allowContact,
+      contactInstagram: allowContact ? contactInstagram || null : null,
+      contactWhatsapp: allowContact ? contactWhatsapp || null : null,
+      contactEmail: allowContact ? contactEmail || null : null,
     };
 
     try {
@@ -75,8 +93,9 @@ export function EventCreateForm() {
   }
 
   const now = new Date();
-  const defaultStart = new Date(now.getTime() + 3600000);
-  defaultStart.setMinutes(0, 0, 0);
+  const preset = defaultDate && /^\d{4}-\d{2}-\d{2}$/.test(defaultDate) ? new Date(`${defaultDate}T19:00:00`) : null;
+  const defaultStart = preset ?? new Date(now.getTime() + 3600000);
+  if (!preset) defaultStart.setMinutes(0, 0, 0);
   const defaultEnd = new Date(defaultStart.getTime() + 3600000);
   const toLocal = (d: Date) => {
     const pad = (n: number) => String(n).padStart(2, "0");
@@ -193,6 +212,56 @@ export function EventCreateForm() {
           Fiesta de cumpleaños (este año)
         </label>
       </div>
+
+      <fieldset className="space-y-3 rounded-2xl border border-border p-4">
+        <legend className="px-1 text-sm text-ink-muted">Contacto de este evento</legend>
+        <label className="flex items-center gap-2 text-sm">
+          <input
+            type="checkbox"
+            checked={allowContact}
+            onChange={(e) => setAllowContact(e.target.checked)}
+          />
+          Que puedan contactar por este evento
+        </label>
+        <p className="text-pretty text-xs text-ink-faint">
+          Por defecto van tus datos de perfil. Si el evento no es tuyo, cambiá el Instagram, el
+          WhatsApp o el email, o desmarcá el contacto.
+        </p>
+        {allowContact ? (
+          <div className="grid gap-4 sm:grid-cols-2">
+            <label className="block text-sm sm:col-span-2">
+              <span className="text-ink-muted">Instagram</span>
+              <input
+                className="input-field mt-1"
+                value={contactInstagram}
+                onChange={(e) => setContactInstagram(e.target.value)}
+                placeholder="@usuario"
+                autoComplete="off"
+              />
+            </label>
+            <label className="block text-sm">
+              <span className="text-ink-muted">WhatsApp</span>
+              <input
+                className="input-field mt-1"
+                value={contactWhatsapp}
+                onChange={(e) => setContactWhatsapp(e.target.value)}
+                placeholder="+54 9 11 1234-5678"
+                inputMode="tel"
+              />
+            </label>
+            <label className="block text-sm">
+              <span className="text-ink-muted">Email</span>
+              <input
+                type="email"
+                className="input-field mt-1"
+                value={contactEmail}
+                onChange={(e) => setContactEmail(e.target.value)}
+                placeholder="hola@ejemplo.com"
+              />
+            </label>
+          </div>
+        ) : null}
+      </fieldset>
 
       <input type="hidden" name="locationMode" value="physical" />
       <input type="hidden" name="priceLabel" value="" />

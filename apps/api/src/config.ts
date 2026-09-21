@@ -13,8 +13,7 @@ const candidates = [
 ];
 for (const path of candidates) {
   if (existsSync(path)) {
-    loadDotenv({ path });
-    break;
+    loadDotenv({ path, override: false });
   }
 }
 
@@ -41,6 +40,7 @@ const EnvSchema = z.object({
   GOOGLE_CLIENT_ID: z.string().min(1).optional(),
   GOOGLE_CLIENT_SECRET: z.string().min(1).optional(),
   GOOGLE_TOKEN_ENCRYPTION_KEY: z.string().min(16).optional(),
+  GOOGLE_MAPS_API_KEY: z.string().min(1).optional(),
   APP_URL: z.string().url(),
   CORS_ORIGIN: z.string().min(1),
 });
@@ -84,8 +84,17 @@ export function assertGoogleCalendarConfigured(): void {
   if (!env.GOOGLE_CLIENT_ID || !env.GOOGLE_CLIENT_SECRET || !env.GOOGLE_TOKEN_ENCRYPTION_KEY) {
     throw Object.assign(
       new Error(
-        "Google Calendar sync is not configured. Set GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET and GOOGLE_TOKEN_ENCRYPTION_KEY.",
+        "Google Calendar no está configurado. Faltan GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET o GOOGLE_TOKEN_ENCRYPTION_KEY.",
       ),
+      { statusCode: 503 },
+    );
+  }
+}
+
+export function assertGoogleMapsConfigured(): void {
+  if (!env.GOOGLE_MAPS_API_KEY) {
+    throw Object.assign(
+      new Error("Google Maps no está configurado. Falta GOOGLE_MAPS_API_KEY."),
       { statusCode: 503 },
     );
   }

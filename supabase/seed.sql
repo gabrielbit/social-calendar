@@ -71,6 +71,14 @@ values
   ('a0000000-0000-4000-8000-000000000007', 'Abasto',       '{teatro,impro}')
 on conflict (user_id) do nothing;
 
+update public.profiles
+set
+  instagram_handle = 'anaruizyoga',
+  whatsapp_phone = '5491123456789',
+  contact_email = 'ana@dummy.test',
+  allow_contact = true
+where id = 'a0000000-0000-4000-8000-000000000001';
+
 -- ---------------------------------------------------------------------------
 -- Tags y sedes
 -- ---------------------------------------------------------------------------

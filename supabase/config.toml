@@ -27,9 +27,13 @@ refresh_token_reuse_interval = 10
 
 [auth.email]
 enable_signup = true
-enable_confirmations = false
+enable_confirmations = true
 
 [auth.external.google]
 enabled = true
+# Requiere GOOGLE_CLIENT_ID y GOOGLE_CLIENT_SECRET en el entorno al hacer `supabase start`
+# (las mismas de apps/api/.env). Redirect URI en Google Cloud:
+# http://127.0.0.1:54321/auth/v1/callback
 client_id = "env(GOOGLE_CLIENT_ID)"
 secret = "env(GOOGLE_CLIENT_SECRET)"
+skip_nonce_check = true

@@ -2,6 +2,9 @@ import { createClient } from "@/lib/supabase/server";
 import type {
   AgendaOccurrence,
   ExploreResult,
+  HomeCalendarData,
+  HomeCalendarEvent,
+  HomePersonalEvent,
   NetworkBirthday,
   OccurrenceDetail,
   ProfilePublic,
@@ -61,7 +64,9 @@ export async function getOccurrenceDetail(
       event:events (
         id, slug, title, description_html, visibility, editorial_status,
         location_mode, online_url, site_url, tickets_url, is_free, price_label,
-        cover_image_url, author_id, timezone, contact_type, contact_value,
+        cover_image_url, author_id, timezone, allow_contact,
+        contact_instagram, contact_whatsapp, contact_email,
+        contact_type, contact_value,
         author:profiles!events_author_id_fkey ( slug, display_name, avatar_url ),
         venue:venues ( name, address, zone, city ),
         event_tags ( tag:tags ( id, slug, name ) )
@@ -356,4 +361,162 @@ export async function getIsFollowing(
     .eq("following_id", profileId)
     .maybeSingle();
   return Boolean(data);
+}
+
+const HOME_OCCURRENCE_SELECT = `
+  id, starts_at, ends_at, all_day, timezone,
+  event:events!inner (
+    title, cover_image_url, is_free, price_label, site_url, visibility, author_id,
+    editorial_status, deleted_at,
+    author:profiles!events_author_id_fkey ( slug, display_name ),
+    venue:venues ( name, zone ),
+    event_tags ( tag:tags ( slug ) )
+  )
+`;
+
+function first<T>(value: T | T[] | null | undefined): T | null {
+  if (Array.isArray(value)) return value[0] ?? null;
+  return value ?? null;
+}
+
+function mapHomeRows(data: unknown, goingIds: Set<string>): HomeCalendarEvent[] {
+  return (Array.isArray(data) ? data : []).flatMap((raw) => {
+    const row = raw as Record<string, unknown>;
+    const event = first(row.event as Record<string, unknown> | Record<string, unknown>[] | null);
+    if (!event) return [];
+    const author = first(event.author as { slug: string; display_name: string } | { slug: string; display_name: string }[] | null);
+    if (!author) return [];
+    const venue = first(event.venue as { name: string | null; zone: string | null } | { name: string | null; zone: string | null }[] | null);
+    const eventTags = (event.event_tags as Array<{ tag: { slug: string } }> | undefined) ?? [];
+    const id = row.id as string;
+    const place = [venue?.name, venue?.zone].filter(Boolean).join(" · ") || venue?.zone || null;
+    return [
+      {
+        occurrence_id: id,
+        title: event.title as string,
+        starts_at: row.starts_at as string,
+        ends_at: row.ends_at as string,
+        all_day: row.all_day as boolean,
+        timezone: row.timezone as string,
+        cover_image_url: (event.cover_image_url as string | null) ?? null,
+        author_slug: author.slug,
+        author_name: author.display_name,
+        zone: venue?.zone ?? null,
+        tag_slugs: eventTags.map((item) => item.tag.slug),
+        venue_name: venue?.name ?? null,
+        place,
+        price_label: event.is_free ? "gratis" : ((event.price_label as string | null) ?? null),
+        is_free: Boolean(event.is_free),
+        site_url: (event.site_url as string | null) ?? null,
+        going: goingIds.has(id),
+      },
+    ];
+  });
+}
+
+function mapPersonalRows(data: unknown): HomePersonalEvent[] {
+  return (Array.isArray(data) ? data : []).flatMap((raw) => {
+    const row = raw as Record<string, unknown>;
+    const event = first(row.event as Record<string, unknown> | Record<string, unknown>[] | null);
+    if (!event) return [];
+    return [
+      {
+        occurrence_id: row.id as string,
+        title: event.title as string,
+        starts_at: row.starts_at as string,
+        ends_at: row.ends_at as string,
+        all_day: row.all_day as boolean,
+        timezone: row.timezone as string,
+      },
+    ];
+  });
+}
+
+export async function getHomeCalendar(userId: string): Promise<HomeCalendarData> {
+  const supabase = await createClient();
+  const from = new Date();
+  from.setMonth(from.getMonth() - 1);
+  from.setDate(1);
+  from.setHours(0, 0, 0, 0);
+  const to = new Date();
+  to.setMonth(to.getMonth() + 4);
+  to.setDate(0);
+  to.setHours(23, 59, 59, 999);
+
+  const fromIso = from.toISOString();
+  const toIso = to.toISOString();
+
+  const [followsRes, rsvpsRes, birthdays, calendarConn] = await Promise.all([
+    supabase.from("follows").select("following_id").eq("follower_id", userId),
+    supabase.from("event_rsvps").select("occurrence_id").eq("user_id", userId).eq("status", "going"),
+    getNetworkBirthdays(),
+    supabase
+      .from("calendar_connections")
+      .select("status")
+      .eq("user_id", userId)
+      .eq("provider", "google")
+      .maybeSingle(),
+  ]);
+
+  const followingIds = (followsRes.data ?? []).map((row) => row.following_id as string);
+  const goingIds = new Set((rsvpsRes.data ?? []).map((row) => row.occurrence_id as string));
+  const authorIds = [...new Set([...followingIds, userId])];
+
+  const culturalQuery = supabase
+    .from("event_occurrences")
+    .select(HOME_OCCURRENCE_SELECT)
+    .eq("cancelled", false)
+    .gte("starts_at", fromIso)
+    .lte("starts_at", toIso)
+    .in("event.author_id", authorIds)
+    .eq("event.editorial_status", "published")
+    .in("event.visibility", ["shared", "public"])
+    .is("event.deleted_at", null)
+    .order("starts_at", { ascending: true });
+
+  const personalQuery = supabase
+    .from("event_occurrences")
+    .select(HOME_OCCURRENCE_SELECT)
+    .eq("cancelled", false)
+    .gte("starts_at", fromIso)
+    .lte("starts_at", toIso)
+    .eq("event.author_id", userId)
+    .eq("event.visibility", "private")
+    .is("event.deleted_at", null)
+    .order("starts_at", { ascending: true });
+
+  const goingQuery =
+    goingIds.size > 0
+      ? supabase
+          .from("event_occurrences")
+          .select(HOME_OCCURRENCE_SELECT)
+          .in("id", [...goingIds])
+          .eq("cancelled", false)
+          .gte("starts_at", fromIso)
+          .lte("starts_at", toIso)
+          .order("starts_at", { ascending: true })
+      : Promise.resolve({ data: [] });
+
+  const [culturalRes, personalRes, goingRes] = await Promise.all([
+    culturalQuery,
+    personalQuery,
+    goingQuery,
+  ]);
+
+  const byId = new Map<string, HomeCalendarEvent>();
+  for (const event of mapHomeRows(culturalRes.data, goingIds)) {
+    byId.set(event.occurrence_id, event);
+  }
+  for (const event of mapHomeRows(goingRes.data, goingIds)) {
+    const existing = byId.get(event.occurrence_id);
+    if (existing) existing.going = true;
+    else byId.set(event.occurrence_id, { ...event, going: true });
+  }
+
+  return {
+    events: [...byId.values()].sort((a, b) => a.starts_at.localeCompare(b.starts_at)),
+    personal: mapPersonalRows(personalRes.data),
+    birthdays,
+    googleConnected: calendarConn.data?.status === "active",
+  };
 }

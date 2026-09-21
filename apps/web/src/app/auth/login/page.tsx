@@ -6,6 +6,7 @@ import { Mail } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { appUrl } from "@/lib/dates";
 import { Container } from "@/components/layout/Container";
+import { authErrorMessage } from "@/lib/auth-errors";
 
 export default function LoginPage() {
   const [email, setEmail] = useState("");
@@ -16,9 +17,15 @@ export default function LoginPage() {
 
   useEffect(() => {
     if (typeof window === "undefined") return;
-    const params = new URLSearchParams(window.location.hash.replace(/^#/, ""));
-    const access_token = params.get("access_token");
-    const refresh_token = params.get("refresh_token");
+    const params = new URLSearchParams(window.location.search);
+    const queryError = params.get("error");
+    if (queryError === "auth") {
+      setError("No se pudo completar el acceso. Probá de nuevo.");
+    }
+
+    const hash = new URLSearchParams(window.location.hash.replace(/^#/, ""));
+    const access_token = hash.get("access_token");
+    const refresh_token = hash.get("refresh_token");
     if (!access_token || !refresh_token) return;
 
     const supabase = createClient();
@@ -28,8 +35,7 @@ export default function LoginPage() {
     });
   }, []);
 
-  async function handleMagicLink(e: React.FormEvent) {
-    e.preventDefault();
+  async function handleMagicLink() {
     setError(null);
     setLoading(true);
     const supabase = createClient();
@@ -41,20 +47,21 @@ export default function LoginPage() {
     });
     setLoading(false);
     if (authError) {
-      setError(authError.message);
+      setError(authErrorMessage(authError.message));
       return;
     }
     setSent(true);
   }
 
-  async function handlePassword() {
+  async function handlePassword(e: React.FormEvent) {
+    e.preventDefault();
     setError(null);
     setLoading(true);
     const supabase = createClient();
     const { error: authError } = await supabase.auth.signInWithPassword({ email, password });
     setLoading(false);
     if (authError) {
-      setError(authError.message);
+      setError(authErrorMessage(authError.message));
       return;
     }
     window.location.href = "/";
@@ -69,22 +76,22 @@ export default function LoginPage() {
         redirectTo: appUrl("/auth/callback"),
       },
     });
-    if (authError) setError(authError.message);
+    if (authError) setError(authErrorMessage(authError.message));
   }
 
   return (
     <Container className="flex min-h-[calc(100dvh-10rem)] items-center py-16">
       <div className="mx-auto w-full max-w-md text-center">
         <h1 className="page-title">Entrar</h1>
-        <p className="page-lede mx-auto">Magic link, contraseña o Google.</p>
+        <p className="page-lede mx-auto">Con email, Google o un enlace mágico.</p>
 
         {sent ? (
           <div className="card mt-8 text-pretty text-sm text-ink-muted" role="status">
             Te enviamos un enlace a <strong className="text-ink">{email}</strong>. Revisá tu
-            bandeja de entrada.
+            bandeja.
           </div>
         ) : (
-          <form onSubmit={handleMagicLink} className="mt-8 space-y-4 text-left">
+          <form onSubmit={handlePassword} className="mt-8 space-y-4 text-left">
             <label className="block text-sm">
               <span className="text-ink-muted">Email</span>
               <input
@@ -97,28 +104,28 @@ export default function LoginPage() {
                 placeholder="tu@email.com"
               />
             </label>
-            <button type="submit" disabled={loading} className="btn-primary w-full">
-              <Mail className="size-4" aria-hidden />
-              {loading ? "Enviando…" : "Enviar magic link"}
-            </button>
             <label className="block text-sm">
-              <span className="text-ink-muted">Contraseña (opcional)</span>
+              <span className="text-ink-muted">Contraseña</span>
               <input
                 type="password"
+                required
                 autoComplete="current-password"
                 className="input-field mt-1.5"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                placeholder="Si ya tenés una"
               />
             </label>
+            <button type="submit" disabled={loading} className="btn-primary w-full">
+              {loading ? "Entrando…" : "Entrar"}
+            </button>
             <button
               type="button"
-              disabled={loading || !password}
-              onClick={handlePassword}
+              disabled={loading || !email}
+              onClick={handleMagicLink}
               className="btn-secondary w-full"
             >
-              Entrar con contraseña
+              <Mail className="size-4" aria-hidden />
+              Enviame un enlace
             </button>
           </form>
         )}
@@ -142,7 +149,13 @@ export default function LoginPage() {
           </p>
         ) : null}
 
-        <p className="mt-10 text-sm text-ink-faint">
+        <p className="mt-8 text-sm text-ink-muted">
+          ¿No tenés cuenta?{" "}
+          <Link href="/auth/signup" className="text-ink hover:text-white">
+            Crear cuenta
+          </Link>
+        </p>
+        <p className="mt-4 text-sm text-ink-faint">
           <Link href="/" className="hover:text-ink">
             ← Volver al inicio
           </Link>

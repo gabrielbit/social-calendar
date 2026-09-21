@@ -2,6 +2,15 @@ import { describe, expect, it } from "vitest";
 import { sanitizeHtml } from "../sanitize.js";
 import { expandRrule, resolveBirthdayDate, isLeapYear } from "../recurrence.js";
 import { buildGoogleCalendarUrl, buildIcs, buildWhatsAppShareUrl } from "../calendar-links.js";
+import {
+  buildInstagramProfileUrl,
+  buildMailtoUrl,
+  buildWhatsAppMessageUrl,
+  hasPublicContact,
+  normalizeContactEmail,
+  normalizeInstagramHandle,
+  normalizeWhatsAppPhone,
+} from "../contact.js";
 import { parseIcs, parseFlyerText } from "../ingest.js";
 
 describe("sanitizeHtml", () => {
@@ -75,6 +84,29 @@ describe("calendar links", () => {
       url: "https://agenda.example/e/1",
     });
     expect(url.startsWith("https://wa.me/?text=")).toBe(true);
+  });
+});
+
+describe("contact channels", () => {
+  it("normalizes instagram handles and urls", () => {
+    expect(normalizeInstagramHandle("@ana.yoga")).toBe("ana.yoga");
+    expect(normalizeInstagramHandle("https://instagram.com/ana.yoga/")).toBe("ana.yoga");
+    expect(normalizeInstagramHandle("no spaces")).toBeNull();
+  });
+
+  it("normalizes argentine whatsapp numbers", () => {
+    expect(normalizeWhatsAppPhone("11 2345-6789")).toBe("5491123456789");
+    expect(normalizeWhatsAppPhone("+54 9 11 2345-6789")).toBe("5491123456789");
+    expect(normalizeWhatsAppPhone("abc")).toBeNull();
+  });
+
+  it("builds contact urls", () => {
+    expect(buildInstagramProfileUrl("ana.yoga")).toBe("https://instagram.com/ana.yoga");
+    expect(buildWhatsAppMessageUrl("5491123456789", "Hola")).toContain("wa.me/5491123456789");
+    expect(buildMailtoUrl("ana@example.com", "Evento")).toContain("mailto:ana@example.com");
+    expect(normalizeContactEmail(" Ana@Example.com ")).toBe("ana@example.com");
+    expect(hasPublicContact({ allowContact: false, instagram: "x", whatsapp: null, email: null })).toBe(false);
+    expect(hasPublicContact({ allowContact: true, instagram: "x", whatsapp: null, email: null })).toBe(true);
   });
 });
 

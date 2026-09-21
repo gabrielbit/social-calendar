@@ -1,6 +1,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { MapPin, Globe, Ticket } from "lucide-react";
+import { ContactLinks } from "@/components/contact/ContactLinks";
 import { EventActions } from "@/components/events/EventActions";
 import { formatEventDate, formatEventTime } from "@/lib/dates";
 import type { OccurrenceDetail } from "@/lib/types";
@@ -128,6 +129,22 @@ export function EventDetailView({
           className="prose prose-invert mb-10 max-w-none text-pretty text-ink-muted prose-a:text-ink"
           dangerouslySetInnerHTML={{ __html: event.description_html }}
         />
+      ) : null}
+
+      {event.allow_contact && (event.contact_instagram || event.contact_whatsapp || event.contact_email) ? (
+        <section className="mb-8">
+          <p className="mb-3 text-sm font-medium text-ink">Contacto del evento</p>
+          <ContactLinks
+            contact={{
+              allowContact: event.allow_contact,
+              instagram: event.contact_instagram,
+              whatsapp: event.contact_whatsapp,
+              email: event.contact_email,
+            }}
+            message={`Hola! Vi “${event.title}” en Agenda Comunidad`}
+            emailSubject={event.title}
+          />
+        </section>
       ) : null}
 
       <EventActions

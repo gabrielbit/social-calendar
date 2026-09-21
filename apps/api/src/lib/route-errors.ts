@@ -13,6 +13,11 @@ export function handleRouteError(reply: ReplyLike, error: unknown) {
   }
 
   const message = error instanceof Error ? error.message : "Unexpected error";
+  const status = (error as { statusCode?: number }).statusCode;
+
+  if (typeof status === "number" && status >= 400) {
+    return reply.code(status).send({ error: message, statusCode: status });
+  }
 
   if (message.includes("Rate limit")) {
     return reply.code(429).send({ error: message, statusCode: 429 });

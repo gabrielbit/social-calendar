@@ -12,6 +12,7 @@ import { Container } from "@/components/layout/Container";
 import { occurrenceToExplore, sourcesFromOccurrences } from "@/lib/events";
 import { eventDayKey, formatBirthday } from "@/lib/dates";
 import { profileTypeLabel } from "@/lib/labels";
+import { ContactLinks } from "@/components/contact/ContactLinks";
 import { createClient } from "@/lib/supabase/server";
 import {
   getAgendaOccurrences,
@@ -100,6 +101,21 @@ export default async function AgendaPage({ params, searchParams }: Props) {
               {profile.public_location ? ` · ${profile.public_location}` : ""}
             </p>
             {profile.bio ? <p className="mt-3 max-w-xl text-pretty text-ink-muted">{profile.bio}</p> : null}
+            {profile.allow_contact &&
+            (profile.instagram_handle || profile.whatsapp_phone || profile.contact_email) ? (
+              <div className="mt-4">
+                <ContactLinks
+                  contact={{
+                    allowContact: profile.allow_contact,
+                    instagram: profile.instagram_handle,
+                    whatsapp: profile.whatsapp_phone,
+                    email: profile.contact_email,
+                  }}
+                  message={`Hola ${profile.display_name}! Te escribo desde Agenda Comunidad`}
+                  emailSubject={`Consulta para ${profile.display_name}`}
+                />
+              </div>
+            ) : null}
             {profile.birthday_month && profile.birthday_day ? (
               <p className="mt-2 text-sm text-ink-faint">
                 {formatBirthday(profile.birthday_month, profile.birthday_day)}

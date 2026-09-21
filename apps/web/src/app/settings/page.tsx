@@ -16,7 +16,7 @@ export default async function SettingsPage() {
   const { data: profile } = await supabase
     .from("profiles")
     .select(
-      "display_name, slug, bio, birthday_month, birthday_day, birthday_visibility, public_location",
+      "display_name, slug, bio, birthday_month, birthday_day, birthday_visibility, public_location, instagram_handle, whatsapp_phone, contact_email, allow_contact",
     )
     .eq("id", user.id)
     .single();

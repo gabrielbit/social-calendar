@@ -4,6 +4,9 @@ import {
   sanitizeHtml,
   slugify,
   type CreateEventInput,
+  normalizeContactEmail,
+  normalizeInstagramHandle,
+  normalizeWhatsAppPhone,
 } from "@agenda/domain";
 import { z } from "zod";
 import { createServiceClient } from "../lib/supabase.js";
@@ -20,6 +23,105 @@ const OCCURRENCE_HORIZON_MONTHS = 12;
 export function sanitizeDescriptionHtml(html: string | undefined | null): string | null {
   if (!html) return null;
   return sanitizeHtml(html);
+}
+
+function invalidContact(message: string): Error {
+  return Object.assign(new Error(message), { statusCode: 400 });
+}
+
+function requiredNormalize<T>(
+  raw: string | null | undefined,
+  normalize: (value: string | null | undefined) => T | null,
+  message: string,
+): T | null {
+  if (raw === undefined || raw === null || raw.trim() === "") return null;
+  const normalized = normalize(raw);
+  if (!normalized) throw invalidContact(message);
+  return normalized;
+}
+
+type ContactPatch = {
+  allow_contact: boolean;
+  contact_instagram: string | null;
+  contact_whatsapp: string | null;
+  contact_email: string | null;
+  contact_type: "url" | "whatsapp" | "email" | null;
+  contact_value: string | null;
+};
+
+function legacyContactChannels(contact: CreateEventInput["contact"]): {
+  instagram: string | null;
+  whatsapp: string | null;
+  email: string | null;
+} {
+  if (!contact) return { instagram: null, whatsapp: null, email: null };
+  if (contact.type === "whatsapp") {
+    return { instagram: null, whatsapp: normalizeWhatsAppPhone(contact.value), email: null };
+  }
+  if (contact.type === "email") {
+    return { instagram: null, whatsapp: null, email: normalizeContactEmail(contact.value) };
+  }
+  const instagram = normalizeInstagramHandle(contact.value);
+  return { instagram, whatsapp: null, email: null };
+}
+
+function toLegacyContact(channels: {
+  instagram: string | null;
+  whatsapp: string | null;
+  email: string | null;
+}): { type: "url" | "whatsapp" | "email"; value: string } | { type: null; value: null } {
+  if (channels.whatsapp) return { type: "whatsapp", value: channels.whatsapp };
+  if (channels.email) return { type: "email", value: channels.email };
+  if (channels.instagram) return { type: "url", value: `https://instagram.com/${channels.instagram}` };
+  return { type: null, value: null };
+}
+
+async function resolveEventContact(
+  userId: string,
+  input: {
+    allowContact?: boolean;
+    contactInstagram?: string | null;
+    contactWhatsapp?: string | null;
+    contactEmail?: string | null;
+    contact?: CreateEventInput["contact"];
+  },
+  opts: { fillFromProfile: boolean },
+): Promise<ContactPatch> {
+  const db = createServiceClient();
+  const { data: profile } = opts.fillFromProfile
+    ? await db
+        .from("profiles")
+        .select("instagram_handle, whatsapp_phone, contact_email, allow_contact")
+        .eq("id", userId)
+        .maybeSingle()
+    : { data: null };
+
+  const allowContact = input.allowContact ?? profile?.allow_contact ?? true;
+  const legacy = legacyContactChannels(input.contact);
+
+  const instagram = input.contactInstagram !== undefined
+    ? requiredNormalize(input.contactInstagram, normalizeInstagramHandle, "Usuario de Instagram inválido")
+    : (legacy.instagram ?? (allowContact ? (profile?.instagram_handle ?? null) : null));
+  const whatsapp = input.contactWhatsapp !== undefined
+    ? requiredNormalize(input.contactWhatsapp, normalizeWhatsAppPhone, "WhatsApp inválido. Usá código de país, por ejemplo +54 9 11…")
+    : (legacy.whatsapp ?? (allowContact ? (profile?.whatsapp_phone ?? null) : null));
+  const email = input.contactEmail !== undefined
+    ? requiredNormalize(input.contactEmail, normalizeContactEmail, "Email de contacto inválido")
+    : (legacy.email ?? (allowContact ? (profile?.contact_email ?? null) : null));
+
+  const channels = allowContact
+    ? { instagram, whatsapp, email }
+    : { instagram: null, whatsapp: null, email: null };
+  const legacyOut = toLegacyContact(channels);
+
+  return {
+    allow_contact: allowContact,
+    contact_instagram: channels.instagram,
+    contact_whatsapp: channels.whatsapp,
+    contact_email: channels.email,
+    contact_type: legacyOut.type,
+    contact_value: legacyOut.value,
+  };
 }
 
 export async function createEvent(userId: string, input: CreateEventInput) {
@@ -43,6 +145,7 @@ export async function createEvent(userId: string, input: CreateEventInput) {
   const endsAt = new Date(parsed.endsAt);
   const horizonEnd = new Date(startsAt);
   horizonEnd.setUTCMonth(horizonEnd.getUTCMonth() + OCCURRENCE_HORIZON_MONTHS);
+  const contact = await resolveEventContact(userId, parsed, { fillFromProfile: true });
 
   const { data: event, error: eventError } = await db
     .from("events")
@@ -67,8 +170,7 @@ export async function createEvent(userId: string, input: CreateEventInput) {
       is_free: parsed.isFree,
       price_label: parsed.priceLabel ?? null,
       ticket_deadline_at: parsed.ticketDeadlineAt ?? null,
-      contact_type: parsed.contact?.type ?? null,
-      contact_value: parsed.contact?.value ?? null,
+      ...contact,
       capacity: parsed.capacity ?? null,
       language: parsed.language,
       age_restriction: parsed.ageRestriction ?? null,
@@ -162,9 +264,17 @@ export async function updateEvent(userId: string, eventId: string, input: Update
   if (parsed.isFree !== undefined) patch.is_free = parsed.isFree;
   if (parsed.priceLabel !== undefined) patch.price_label = parsed.priceLabel;
   if (parsed.ticketDeadlineAt !== undefined) patch.ticket_deadline_at = parsed.ticketDeadlineAt;
-  if (parsed.contact !== undefined) {
-    patch.contact_type = parsed.contact?.type ?? null;
-    patch.contact_value = parsed.contact?.value ?? null;
+  if (
+    parsed.allowContact !== undefined ||
+    parsed.contactInstagram !== undefined ||
+    parsed.contactWhatsapp !== undefined ||
+    parsed.contactEmail !== undefined ||
+    parsed.contact !== undefined
+  ) {
+    Object.assign(
+      patch,
+      await resolveEventContact(userId, parsed, { fillFromProfile: false }),
+    );
   }
   if (parsed.capacity !== undefined) patch.capacity = parsed.capacity;
   if (parsed.language !== undefined) patch.language = parsed.language;
@@ -308,6 +418,10 @@ function mapEvent(row: Record<string, unknown>) {
     timezone: String(row.timezone),
     rrule: row.rrule ? String(row.rrule) : null,
     coverImageUrl: row.cover_image_url ? String(row.cover_image_url) : null,
+    allowContact: row.allow_contact !== false,
+    contactInstagram: row.contact_instagram ? String(row.contact_instagram) : null,
+    contactWhatsapp: row.contact_whatsapp ? String(row.contact_whatsapp) : null,
+    contactEmail: row.contact_email ? String(row.contact_email) : null,
   };
 }
 

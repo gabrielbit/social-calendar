@@ -1,4 +1,5 @@
-import { format, formatInTimeZone } from "date-fns-tz";
+import { addDays, startOfMonth, startOfWeek } from "date-fns";
+import { format, formatInTimeZone, fromZonedTime, toZonedTime } from "date-fns-tz";
 import { es } from "date-fns/locale";
 import { DEFAULT_TIMEZONE } from "@agenda/domain";
 
@@ -87,4 +88,73 @@ export function groupEventsByDay<T extends { starts_at: string; timezone: string
 export function appUrl(path = ""): string {
   const base = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
   return `${base.replace(/\/$/, "")}${path.startsWith("/") ? path : `/${path}`}`;
+}
+
+function capitalizeEs(value: string): string {
+  if (!value) return value;
+  return value.charAt(0).toUpperCase() + value.slice(1);
+}
+
+export function startOfWeekMonday(date: Date, timezone: string = DEFAULT_TIMEZONE): Date {
+  const zoned = toZonedTime(date, timezone);
+  const start = startOfWeek(zoned, { weekStartsOn: 1 });
+  start.setHours(0, 0, 0, 0);
+  return fromZonedTime(start, timezone);
+}
+
+export function startOfMonthZoned(date: Date, timezone: string = DEFAULT_TIMEZONE): Date {
+  const zoned = toZonedTime(date, timezone);
+  const start = startOfMonth(zoned);
+  start.setHours(0, 0, 0, 0);
+  return fromZonedTime(start, timezone);
+}
+
+export function zonedDayKey(date: Date, timezone: string = DEFAULT_TIMEZONE): string {
+  return formatInTimeZone(date, timezone, "yyyy-MM-dd");
+}
+
+export function weekDaysFrom(weekStart: Date, timezone: string = DEFAULT_TIMEZONE): Date[] {
+  return Array.from({ length: 7 }, (_, index) => addDays(weekStart, index));
+}
+
+export function formatWeekLabel(weekStart: Date, timezone: string = DEFAULT_TIMEZONE): string {
+  const weekEnd = addDays(weekStart, 6);
+  const startDay = formatInTimeZone(weekStart, timezone, "d");
+  const endDay = formatInTimeZone(weekEnd, timezone, "d");
+  const startMonth = formatInTimeZone(weekStart, timezone, "MMMM", { locale: es });
+  const endMonth = formatInTimeZone(weekEnd, timezone, "MMMM", { locale: es });
+  if (startMonth === endMonth) {
+    return `${startDay} – ${endDay} de ${startMonth}`;
+  }
+  return `${startDay} de ${startMonth} – ${endDay} de ${endMonth}`;
+}
+
+export function formatMonthLabel(date: Date, timezone: string = DEFAULT_TIMEZONE): string {
+  return capitalizeEs(formatInTimeZone(date, timezone, "MMMM yyyy", { locale: es }));
+}
+
+export function formatWeekdayLong(date: Date, timezone: string = DEFAULT_TIMEZONE): string {
+  return capitalizeEs(formatInTimeZone(date, timezone, "EEEE", { locale: es }));
+}
+
+export function formatWeekdayShort(date: Date, timezone: string = DEFAULT_TIMEZONE): string {
+  return formatInTimeZone(date, timezone, "EEE", { locale: es }).replace(".", "");
+}
+
+export function formatDuration(startsAt: string, endsAt: string, allDay: boolean): string {
+  if (allDay) return "todo el día";
+  const minutes = Math.max(0, Math.round((Date.parse(endsAt) - Date.parse(startsAt)) / 60000));
+  const hours = Math.floor(minutes / 60);
+  const rest = minutes % 60;
+  return `${hours ? `${hours} h` : ""}${hours && rest ? " " : ""}${rest ? `${rest} min` : ""}`.trim() || "0 min";
+}
+
+export function birthdayMatchesDay(month: number, day: number, dayKey: string): boolean {
+  const [, keyMonth, keyDay] = dayKey.split("-").map(Number);
+  return keyMonth === month && keyDay === day;
+}
+
+export function nameInitials(name: string): string {
+  const parts = name.trim().split(/\s+/).slice(0, 2);
+  return parts.map((part) => part.charAt(0).toUpperCase()).join("") || "?";
 }

@@ -13,6 +13,10 @@ type ProfileRow = {
   birthday_day: number | null;
   birthday_year?: number | null;
   birthday_visibility: string;
+  instagram_handle?: string | null;
+  whatsapp_phone?: string | null;
+  contact_email?: string | null;
+  allow_contact?: boolean | null;
   onboarding_completed_at?: string | null;
   created_at?: string;
   updated_at?: string;
@@ -32,6 +36,10 @@ export type PublicProfileDto = {
   birthdayMonth: number | null;
   birthdayDay: number | null;
   birthdayVisibility: string;
+  instagramHandle: string | null;
+  whatsappPhone: string | null;
+  contactEmail: string | null;
+  allowContact: boolean;
   createdAt?: string;
 };
 
@@ -56,6 +64,10 @@ export function toPublicProfile(row: ProfileRow, opts?: { includeBirthday?: bool
     birthdayMonth: includeBirthday ? row.birthday_month : null,
     birthdayDay: includeBirthday ? row.birthday_day : null,
     birthdayVisibility: row.birthday_visibility,
+    instagramHandle: row.allow_contact === false ? null : (row.instagram_handle ?? null),
+    whatsappPhone: row.allow_contact === false ? null : (row.whatsapp_phone ?? null),
+    contactEmail: row.allow_contact === false ? null : (row.contact_email ?? null),
+    allowContact: row.allow_contact !== false,
     ...(row.created_at ? { createdAt: row.created_at } : {}),
   };
 }
@@ -63,6 +75,10 @@ export function toPublicProfile(row: ProfileRow, opts?: { includeBirthday?: bool
 export function toOwnerProfile(row: ProfileRow): OwnerProfileDto {
   return {
     ...toPublicProfile(row, { includeBirthday: true }),
+    instagramHandle: row.instagram_handle ?? null,
+    whatsappPhone: row.whatsapp_phone ?? null,
+    contactEmail: row.contact_email ?? null,
+    allowContact: row.allow_contact !== false,
     birthdayYear: row.birthday_year ?? null,
     onboardingCompletedAt: row.onboarding_completed_at ?? null,
   };

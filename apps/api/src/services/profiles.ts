@@ -2,6 +2,9 @@ import {
   CreateProfileSchema,
   type CreateProfileInput,
   SlugSchema,
+  normalizeContactEmail,
+  normalizeInstagramHandle,
+  normalizeWhatsAppPhone,
 } from "@agenda/domain";
 import { z } from "zod";
 import { createServiceClient } from "../lib/supabase.js";
@@ -10,7 +13,10 @@ import { toOwnerProfile, toPublicProfile, type OwnerProfileDto, type PublicProfi
 const UpdateProfileSchema = CreateProfileSchema.partial().extend({
   avatarUrl: z.string().url().nullable().optional(),
   coverUrl: z.string().url().nullable().optional(),
-  publicLocation: z.string().max(120).nullable().optional(),
+  publicLocation: z.string().max(200).nullable().optional(),
+  birthdayMonth: z.number().int().min(1).max(12).nullable().optional(),
+  birthdayDay: z.number().int().min(1).max(31).nullable().optional(),
+  birthdayYear: z.number().int().min(1900).max(2100).nullable().optional(),
 });
 
 export type UpdateProfileInput = z.infer<typeof UpdateProfileSchema>;
@@ -39,6 +45,42 @@ export type PreferencesDto = {
   notifyBirthdays: boolean;
 };
 
+function invalidContact(message: string): Error {
+  return Object.assign(new Error(message), { statusCode: 400 });
+}
+
+function parsedContactFields(input: {
+  instagramHandle?: string | null;
+  whatsappPhone?: string | null;
+  contactEmail?: string | null;
+  allowContact?: boolean;
+}) {
+  const fields: Record<string, unknown> = {};
+  if (input.instagramHandle !== undefined) {
+    const normalized = normalizeInstagramHandle(input.instagramHandle);
+    if (input.instagramHandle?.trim() && !normalized) {
+      throw invalidContact("Usuario de Instagram inválido");
+    }
+    fields.instagram_handle = normalized;
+  }
+  if (input.whatsappPhone !== undefined) {
+    const normalized = normalizeWhatsAppPhone(input.whatsappPhone);
+    if (input.whatsappPhone?.trim() && !normalized) {
+      throw invalidContact("WhatsApp inválido. Usá código de país, por ejemplo +54 9 11…");
+    }
+    fields.whatsapp_phone = normalized;
+  }
+  if (input.contactEmail !== undefined) {
+    const normalized = normalizeContactEmail(input.contactEmail);
+    if (input.contactEmail?.trim() && !normalized) {
+      throw invalidContact("Email de contacto inválido");
+    }
+    fields.contact_email = normalized;
+  }
+  if (input.allowContact !== undefined) fields.allow_contact = input.allowContact;
+  return fields;
+}
+
 export async function ensureOnboarding(userId: string, input: CreateProfileInput): Promise<OwnerProfileDto> {
   const db = createServiceClient();
   const parsed = CreateProfileSchema.parse(input);
@@ -61,6 +103,7 @@ export async function ensureOnboarding(userId: string, input: CreateProfileInput
         birthday_day: parsed.birthdayDay ?? null,
         birthday_year: parsed.birthdayYear ?? null,
         birthday_visibility: parsed.birthdayVisibility,
+        ...parsedContactFields(parsed),
         onboarding_completed_at: now,
         updated_at: now,
       })
@@ -114,6 +157,7 @@ export async function updateProfile(userId: string, input: UpdateProfileInput): 
   if (parsed.avatarUrl !== undefined) patch.avatar_url = parsed.avatarUrl;
   if (parsed.coverUrl !== undefined) patch.cover_url = parsed.coverUrl;
   if (parsed.publicLocation !== undefined) patch.public_location = parsed.publicLocation;
+  Object.assign(patch, parsedContactFields(parsed));
 
   const { data, error } = await db.from("profiles").update(patch).eq("id", userId).select("*").single();
   if (error || !data) throw new Error(error?.message ?? "Failed to update profile");
@@ -215,6 +259,10 @@ export async function getPublicProfile(
       birthday_month: includeBirthday ? data.birthday_month : null,
       birthday_day: includeBirthday ? data.birthday_day : null,
       birthday_visibility: data.birthday_visibility,
+      instagram_handle: data.instagram_handle,
+      whatsapp_phone: data.whatsapp_phone,
+      contact_email: data.contact_email,
+      allow_contact: data.allow_contact,
     },
     { includeBirthday },
   );

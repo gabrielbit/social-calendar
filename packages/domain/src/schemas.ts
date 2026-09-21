@@ -55,6 +55,10 @@ export const CreateProfileSchema = z.object({
   birthdayDay: z.number().int().min(1).max(31).optional(),
   birthdayYear: z.number().int().min(1900).max(2100).optional(),
   birthdayVisibility: BirthdayVisibilitySchema.default("followers"),
+  instagramHandle: z.string().max(80).nullable().optional(),
+  whatsappPhone: z.string().max(32).nullable().optional(),
+  contactEmail: z.string().max(200).nullable().optional(),
+  allowContact: z.boolean().optional(),
 });
 export type CreateProfileInput = z.infer<typeof CreateProfileSchema>;
 
@@ -78,6 +82,10 @@ export const CreateEventSchema = z.object({
   priceLabel: z.string().max(120).nullable().optional(),
   ticketDeadlineAt: z.string().datetime({ offset: true }).nullable().optional(),
   contact: ContactSchema.nullable().optional(),
+  allowContact: z.boolean().optional(),
+  contactInstagram: z.string().max(80).nullable().optional(),
+  contactWhatsapp: z.string().max(32).nullable().optional(),
+  contactEmail: z.string().max(200).nullable().optional(),
   capacity: z.number().int().positive().nullable().optional(),
   language: z.string().max(16).default("es"),
   ageRestriction: z.string().max(80).nullable().optional(),

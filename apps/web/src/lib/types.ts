@@ -12,6 +12,10 @@ export type ProfilePublic = {
   birthday_month: number | null;
   birthday_day: number | null;
   birthday_visibility: string;
+  instagram_handle: string | null;
+  whatsapp_phone: string | null;
+  contact_email: string | null;
+  allow_contact: boolean;
   created_at: string;
 };
 
@@ -54,6 +58,10 @@ export type EventDetail = {
   cover_image_url: string | null;
   author_id: string;
   timezone: string;
+  allow_contact: boolean;
+  contact_instagram: string | null;
+  contact_whatsapp: string | null;
+  contact_email: string | null;
   contact_type: string | null;
   contact_value: string | null;
   author?: {
@@ -102,4 +110,29 @@ export type ExploreResult = {
   author_name: string;
   zone: string | null;
   tag_slugs: string[];
+};
+
+export type HomeCalendarEvent = ExploreResult & {
+  venue_name: string | null;
+  place: string | null;
+  price_label: string | null;
+  is_free: boolean;
+  site_url: string | null;
+  going: boolean;
+};
+
+export type HomePersonalEvent = {
+  occurrence_id: string;
+  title: string;
+  starts_at: string;
+  ends_at: string;
+  all_day: boolean;
+  timezone: string;
+};
+
+export type HomeCalendarData = {
+  events: HomeCalendarEvent[];
+  personal: HomePersonalEvent[];
+  birthdays: NetworkBirthday[];
+  googleConnected: boolean;
 };

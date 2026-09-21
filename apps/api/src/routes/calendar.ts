@@ -9,9 +9,13 @@ import {
 } from "../services/calendar-sync.js";
 
 const calendarRoutes: FastifyPluginAsync = async (app) => {
-  app.get("/calendar/google/connect", { preHandler: [app.authenticate] }, async (request) => {
-    const url = buildGoogleOAuthStartUrl(request.user.id);
-    return { url };
+  app.get("/calendar/google/connect", { preHandler: [app.authenticate] }, async (request, reply) => {
+    try {
+      const url = buildGoogleOAuthStartUrl(request.user.id);
+      return { url };
+    } catch (error) {
+      return handleRouteError(reply, error);
+    }
   });
 
   app.post("/calendar/google/callback", { preHandler: [app.authenticate] }, async (request, reply) => {

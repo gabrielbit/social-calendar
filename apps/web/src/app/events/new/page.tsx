@@ -8,12 +8,23 @@ export const metadata = {
   title: "Nuevo evento · Agenda Comunidad",
 };
 
-export default async function NewEventPage() {
+type Props = {
+  searchParams: Promise<{ date?: string }>;
+};
+
+export default async function NewEventPage({ searchParams }: Props) {
   const supabase = await createClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();
   if (!user) redirect("/auth/login?next=/events/new");
+
+  const { date } = await searchParams;
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("instagram_handle, whatsapp_phone, contact_email, allow_contact")
+    .eq("id", user.id)
+    .maybeSingle();
 
   return (
     <Container className="py-10 sm:py-14">
@@ -21,7 +32,15 @@ export default async function NewEventPage() {
         title="Nuevo evento"
         description="Publicá en tu agenda. Podés importar desde ICS o un flyer en Ajustes → Importar."
       />
-      <EventCreateForm />
+      <EventCreateForm
+        defaultDate={date}
+        defaultContact={{
+          allowContact: profile?.allow_contact ?? true,
+          instagram: profile?.instagram_handle ?? "",
+          whatsapp: profile?.whatsapp_phone ?? "",
+          email: profile?.contact_email ?? "",
+        }}
+      />
     </Container>
   );
 }

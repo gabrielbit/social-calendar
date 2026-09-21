@@ -2,21 +2,27 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { CalendarDays, Compass, Plus } from "lucide-react";
+import { CalendarDays, Compass, List, Plus } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const links = [
   {
+    href: "/",
+    label: "Calendario",
+    match: (path: string) => path === "/",
+    icon: CalendarDays,
+  },
+  {
     href: "/explorar",
-    label: "Agenda pública",
-    match: (path: string) => path === "/" || path === "/explorar" || path.startsWith("/a/"),
+    label: "Explorar",
+    match: (path: string) => path === "/explorar" || path.startsWith("/a/"),
     icon: Compass,
   },
   {
     href: "/mi-agenda",
-    label: "Mi agenda",
+    label: "Lista",
     match: (path: string) => path.startsWith("/mi-agenda"),
-    icon: CalendarDays,
+    icon: List,
   },
 ];
 

@@ -1,7 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { DM_Sans } from "next/font/google";
 import { Nav } from "@/components/layout/Nav";
-import { Container } from "@/components/layout/Container";
+import { SiteFooter } from "@/components/layout/SiteFooter";
 import "./globals.css";
 
 const sans = DM_Sans({
@@ -34,11 +34,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         />
         <Nav />
         <main className="relative pt-[calc(3.5rem+env(safe-area-inset-top))]">{children}</main>
-        <footer className="relative border-t border-border pb-[env(safe-area-inset-bottom)]">
-          <Container className="py-10 text-center text-sm text-ink-faint">
-            <p>Agenda — eventos con atribución</p>
-          </Container>
-        </footer>
+        <SiteFooter />
       </body>
     </html>
   );

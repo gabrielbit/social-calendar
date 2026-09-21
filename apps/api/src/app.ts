@@ -12,6 +12,7 @@ import ingestRoutes from "./routes/ingest.js";
 import moderationRoutes from "./routes/moderation.js";
 import profilesRoutes from "./routes/profiles.js";
 import rsvpRoutes from "./routes/rsvp.js";
+import placesRoutes from "./routes/places.js";
 
 export async function buildApp(opts: FastifyServerOptions = {}) {
   const app = Fastify({
@@ -33,7 +34,10 @@ export async function buildApp(opts: FastifyServerOptions = {}) {
     const err = error as { statusCode?: number; message?: string };
     const statusCode = err.statusCode ?? 500;
     reply.code(statusCode).send({
-      error: statusCode >= 500 ? "Internal server error" : (err.message ?? "Internal server error"),
+      error:
+        statusCode >= 500 && statusCode !== 503
+          ? "Internal server error"
+          : (err.message ?? "Internal server error"),
       statusCode,
     });
   });
@@ -48,6 +52,7 @@ export async function buildApp(opts: FastifyServerOptions = {}) {
       await api.register(rsvpRoutes);
       await api.register(ingestRoutes);
       await api.register(calendarRoutes);
+      await api.register(placesRoutes);
       await api.register(moderationRoutes);
       await api.register(activityRoutes);
     },
