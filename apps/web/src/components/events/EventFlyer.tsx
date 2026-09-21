@@ -65,7 +65,7 @@ export function EventFlyer({ images, title, children }: EventFlyerProps) {
   if (measuring) {
     return (
       <article
-        className="mx-auto h-[min(70dvh,420px)] w-[min(520px,100%)] rounded-[14px] bg-surface shadow-ds-md"
+        className="mx-auto h-[min(70dvh,420px)] w-[min(680px,100%)] rounded-[14px] bg-surface shadow-ds-md"
         aria-busy="true"
       >
         <span className="sr-only">Cargando flyer</span>
@@ -90,7 +90,7 @@ export function EventFlyer({ images, title, children }: EventFlyerProps) {
           fill
           priority
           className="object-cover object-[center_22%]"
-          sizes={vertical ? "(max-width: 540px) 100vw, 320px" : "(max-width: 540px) 100vw, 520px"}
+          sizes={vertical ? "(max-width: 540px) 100vw, 320px" : "(max-width: 540px) 100vw, 680px"}
         />
       ) : null}
 
@@ -125,11 +125,11 @@ export function EventFlyer({ images, title, children }: EventFlyerProps) {
           "mx-auto flex max-h-[calc(100dvh-48px)] overflow-hidden rounded-[14px] bg-surface shadow-ds-md",
           vertical
             ? "w-[min(880px,100%)] flex-col min-[540px]:flex-row"
-            : "w-[min(520px,100%)] flex-col",
+            : "w-[min(680px,100%)] flex-col",
         )}
       >
         {media}
-        <div className="flex min-h-0 min-w-0 flex-1 flex-col gap-2 overflow-y-auto p-3 [&>*]:shrink-0">
+        <div className="flex min-h-0 min-w-0 flex-1 flex-col gap-2.5 overflow-y-auto p-4 [&>*]:shrink-0">
           {children}
         </div>
       </article>

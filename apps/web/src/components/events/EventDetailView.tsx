@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { Pencil } from "lucide-react";
+import { ExternalLink, Pencil, Ticket } from "lucide-react";
 import { buildGoogleMapsUrl, resolveContactDisplay } from "@agenda/domain";
 import { ContactLinks } from "@/components/contact/ContactLinks";
 import { EventActions } from "@/components/events/EventActions";
@@ -150,30 +150,31 @@ export function EventDetailView({
         </p>
       ) : null}
 
-      {event.online_url ? (
-        <p className="text-sm">
-          <a
-            href={event.online_url}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="text-accent-300 hover:text-accent-200"
-          >
-            Enlace online
-          </a>
-        </p>
-      ) : null}
-
-      {event.tickets_url ? (
-        <p className="text-sm">
-          <a
-            href={event.tickets_url}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="text-accent-300 hover:text-accent-200"
-          >
-            Comprar entradas
-          </a>
-        </p>
+      {event.tickets_url || event.online_url ? (
+        <div className="flex flex-wrap gap-2">
+          {event.tickets_url ? (
+            <a
+              href={event.tickets_url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="btn-secondary shrink-0 text-[13px]"
+            >
+              <Ticket className="size-3.5" aria-hidden />
+              Comprar entradas
+            </a>
+          ) : null}
+          {event.online_url ? (
+            <a
+              href={event.online_url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="btn-secondary shrink-0 text-[13px]"
+            >
+              <ExternalLink className="size-3.5" aria-hidden />
+              Enlace online
+            </a>
+          ) : null}
+        </div>
       ) : null}
 
       {event.tags && event.tags.length > 0 ? (
@@ -192,7 +193,7 @@ export function EventDetailView({
 
       {event.description_html ? (
         <div
-          className="prose prose-invert max-w-none text-pretty text-sm text-neutral-300 prose-a:text-accent-300"
+          className="prose prose-invert max-w-none text-pretty text-sm leading-relaxed text-neutral-300 prose-a:text-accent-300"
           dangerouslySetInnerHTML={{ __html: event.description_html }}
         />
       ) : null}

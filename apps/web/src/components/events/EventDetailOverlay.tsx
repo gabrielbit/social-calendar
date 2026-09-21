@@ -35,7 +35,7 @@ export function EventDetailOverlay({
         <EventDetailView occurrence={payload.occurrence} canEdit={payload.canEdit} />
       ) : (
         <div
-          className="h-[min(70dvh,520px)] w-full max-w-[520px] rounded-[14px] bg-surface shadow-ds-md"
+          className="h-[min(70dvh,520px)] w-full max-w-[680px] rounded-[14px] bg-surface shadow-ds-md"
           role="status"
           aria-live="polite"
         >
