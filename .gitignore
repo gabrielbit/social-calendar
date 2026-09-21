@@ -16,3 +16,6 @@ supabase/.branches
 supabase/.temp
 playwright-report
 test-results
+**/__pycache__/
+**/.venv/
+apps/ai/.venv/

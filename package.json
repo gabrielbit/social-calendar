@@ -7,6 +7,7 @@
     "dev:web": "pnpm --filter @agenda/web dev",
     "dev:api": "pnpm --filter @agenda/api dev",
     "dev:worker": "pnpm --filter @agenda/worker dev",
+    "dev:ai": "cd apps/ai && (test -d .venv || python3 -m venv .venv) && .venv/bin/pip install -q -r requirements.txt && .venv/bin/uvicorn src.main:app --reload --host 0.0.0.0 --port 8000",
     "build": "pnpm -r build",
     "build:api": "pnpm --filter @agenda/api build",
     "build:worker": "pnpm --filter @agenda/worker build",

@@ -3,11 +3,12 @@
 import { useState, useTransition } from "react";
 import Link from "next/link";
 import { LogOut, Save } from "lucide-react";
-import { BirthdayVisibilitySchema } from "@agenda/domain";
+import { BirthdayVisibilitySchema, type AgentProvider } from "@agenda/domain";
 import { clientApiGet, clientApiPatch } from "@/lib/api-client";
 import { createClient } from "@/lib/supabase/client";
 import { GoogleCalendarIcon } from "@/components/icons/GoogleCalendarIcon";
 import { LocationAutocomplete } from "@/components/settings/LocationAutocomplete";
+import { AgentMark } from "@/components/agent/AgentMark";
 
 type SettingsFormProps = {
   profile?: {
@@ -27,8 +28,10 @@ type SettingsFormProps = {
     home_zone: string | null;
     notify_email: boolean;
     notify_birthdays: boolean;
+    agent_provider?: string | null;
   };
   googleConnected: boolean;
+  agentEnabled?: boolean;
 };
 
 const VISIBILITY_LABELS: Record<string, string> = {
@@ -37,7 +40,18 @@ const VISIBILITY_LABELS: Record<string, string> = {
   public: "Público",
 };
 
-export function SettingsForm({ profile, prefs, googleConnected }: SettingsFormProps) {
+const PROVIDER_OPTIONS: { value: AgentProvider; label: string }[] = [
+  { value: "openai", label: "OpenAI" },
+  { value: "anthropic", label: "Claude (Anthropic)" },
+  { value: "deepseek", label: "DeepSeek" },
+];
+
+export function SettingsForm({
+  profile,
+  prefs,
+  googleConnected,
+  agentEnabled = false,
+}: SettingsFormProps) {
   const [displayName, setDisplayName] = useState(profile?.display_name ?? "");
   const [bio, setBio] = useState(profile?.bio ?? "");
   const [publicLocation, setPublicLocation] = useState(profile?.public_location ?? "");
@@ -53,6 +67,11 @@ export function SettingsForm({ profile, prefs, googleConnected }: SettingsFormPr
   const [homeZone, setHomeZone] = useState(prefs?.home_zone ?? "");
   const [notifyEmail, setNotifyEmail] = useState(prefs?.notify_email ?? true);
   const [notifyBirthdays, setNotifyBirthdays] = useState(prefs?.notify_birthdays ?? true);
+  const [agentProvider, setAgentProvider] = useState<AgentProvider>(
+    prefs?.agent_provider === "anthropic" || prefs?.agent_provider === "deepseek"
+      ? prefs.agent_provider
+      : "openai",
+  );
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
@@ -100,6 +119,7 @@ export function SettingsForm({ profile, prefs, googleConnected }: SettingsFormPr
           homeZone: homeZone || undefined,
           notifyEmail,
           notifyBirthdays,
+          ...(agentEnabled ? { agentProvider } : {}),
         });
         setMessage("Cambios guardados");
       } catch (err) {
@@ -286,6 +306,32 @@ export function SettingsForm({ profile, prefs, googleConnected }: SettingsFormPr
           {googleConnected ? "Reconectar Google Calendar" : "Conectar Google Calendar"}
         </button>
       </div>
+
+      {agentEnabled && (
+        <div className="rounded-2xl border border-agent/30 bg-agent-soft/40 p-4">
+          <div className="flex items-center gap-2">
+            <AgentMark size="sm" />
+            <p className="text-sm font-medium text-ink">Asistente</p>
+          </div>
+          <p className="mt-1 text-xs text-ink-muted">
+            Modelo para crear eventos desde texto o imágenes. DeepSeek no lee flyers con imagen.
+          </p>
+          <label className="mt-3 block text-sm">
+            <span className="text-ink-muted">Modelo</span>
+            <select
+              className="input-field mt-1"
+              value={agentProvider}
+              onChange={(e) => setAgentProvider(e.target.value as AgentProvider)}
+            >
+              {PROVIDER_OPTIONS.map((option) => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
+          </label>
+        </div>
+      )}
 
       {message && (
         <p className="text-sm text-emerald-400" role="status">

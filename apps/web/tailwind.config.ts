@@ -26,6 +26,11 @@ const config: Config = {
           800: "#423a6a",
           900: "#2b2741",
         },
+        agent: {
+          DEFAULT: "#E85AA8",
+          hover: "#F070B8",
+          soft: "rgba(232, 90, 168, 0.16)",
+        },
         neutral: {
           100: "#f3f5fe",
           200: "#e4e7f5",

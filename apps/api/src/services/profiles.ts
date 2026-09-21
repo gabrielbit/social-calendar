@@ -1,5 +1,7 @@
 import {
+  AgentProviderSchema,
   CreateProfileSchema,
+  type AgentProvider,
   type CreateProfileInput,
   SlugSchema,
   normalizeContactEmail,
@@ -30,6 +32,7 @@ const UpdatePreferencesSchema = z.object({
   notifyEmail: z.boolean().optional(),
   notifyPush: z.boolean().optional(),
   notifyBirthdays: z.boolean().optional(),
+  agentProvider: AgentProviderSchema.optional(),
 });
 
 export type UpdatePreferencesInput = z.infer<typeof UpdatePreferencesSchema>;
@@ -43,6 +46,7 @@ export type PreferencesDto = {
   notifyEmail: boolean;
   notifyPush: boolean;
   notifyBirthdays: boolean;
+  agentProvider: AgentProvider;
 };
 
 function invalidContact(message: string): Error {
@@ -185,6 +189,7 @@ export async function updatePreferences(
   if (parsed.notifyEmail !== undefined) patch.notify_email = parsed.notifyEmail;
   if (parsed.notifyPush !== undefined) patch.notify_push = parsed.notifyPush;
   if (parsed.notifyBirthdays !== undefined) patch.notify_birthdays = parsed.notifyBirthdays;
+  if (parsed.agentProvider !== undefined) patch.agent_provider = parsed.agentProvider;
 
   const { data, error } = await db
     .from("user_preferences")
@@ -203,6 +208,7 @@ export async function updatePreferences(
     notifyEmail: data.notify_email,
     notifyPush: data.notify_push,
     notifyBirthdays: data.notify_birthdays,
+    agentProvider: AgentProviderSchema.catch("openai").parse(data.agent_provider ?? "openai"),
   };
 }
 

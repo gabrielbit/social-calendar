@@ -3,6 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import { Container } from "@/components/layout/Container";
 import { NavLinks } from "@/components/layout/NavLinks";
 import { AccountMenu } from "@/components/layout/AccountMenu";
+import { AgentNavButton } from "@/components/agent/AgentNavButton";
 
 function googleAvatarUrl(user: {
   user_metadata?: Record<string, unknown>;
@@ -25,6 +26,16 @@ export async function Nav() {
     user?.email ||
     "Cuenta";
 
+  let agentEnabled = false;
+  if (user) {
+    const { data: entitlement } = await supabase
+      .from("agent_entitlements")
+      .select("enabled")
+      .eq("user_id", user.id)
+      .maybeSingle();
+    agentEnabled = Boolean(entitlement?.enabled);
+  }
+
   return (
     <header className="fixed inset-x-0 top-0 z-nav border-b border-border bg-canvas/80 pt-[env(safe-area-inset-top)] backdrop-blur-md">
       <Container className="flex h-14 items-center justify-between gap-4">
@@ -41,7 +52,10 @@ export async function Nav() {
         <div className="flex items-center gap-2">
           <NavLinks />
           {user ? (
-            <AccountMenu name={name} avatarUrl={googleAvatarUrl(user)} />
+            <>
+              {agentEnabled && <AgentNavButton />}
+              <AccountMenu name={name} avatarUrl={googleAvatarUrl(user)} />
+            </>
           ) : (
             <Link href="/auth/login" className="btn-secondary px-3 py-1.5 text-sm">
               Entrar

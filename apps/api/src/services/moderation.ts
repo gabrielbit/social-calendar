@@ -11,6 +11,7 @@ const CreateReportSchema = z.object({
 const RATE_LIMITS = {
   create_event: { max: 20, windowMs: 24 * 60 * 60 * 1000 },
   import_ics: { max: 5, windowMs: 60 * 60 * 1000 },
+  agent_turn: { max: 60, windowMs: 60 * 60 * 1000 },
 } as const;
 
 export type RateLimitAction = keyof typeof RATE_LIMITS;
