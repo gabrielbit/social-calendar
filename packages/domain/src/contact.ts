@@ -56,3 +56,27 @@ export function hasPublicContact(contact: ContactChannels | null | undefined): b
   if (!contact?.allowContact) return false;
   return Boolean(contact.instagram || contact.whatsapp || contact.email);
 }
+
+export type ContactSource = "event" | "organizer";
+
+export type ResolvedContact = {
+  channels: ContactChannels;
+  source: ContactSource;
+};
+
+/**
+ * Los canales del evento y los del organizador nunca se mezclan: si el evento
+ * declara al menos un canal propio, ese set es el único que se muestra. Que el
+ * evento desactive el contacto también gana sobre los datos del organizador.
+ */
+export function resolveContactDisplay(
+  event: ContactChannels | null | undefined,
+  organizer: ContactChannels | null | undefined,
+): ResolvedContact | null {
+  if (event && !event.allowContact) return null;
+  if (hasPublicContact(event)) return { channels: event as ContactChannels, source: "event" };
+  if (hasPublicContact(organizer)) {
+    return { channels: organizer as ContactChannels, source: "organizer" };
+  }
+  return null;
+}

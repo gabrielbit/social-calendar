@@ -138,6 +138,28 @@
   background: rgb(12 10 22 / 0.8);
 }
 
+.event-detail-dialog {
+  inset: 0;
+  width: 100%;
+  max-width: none;
+  height: 100%;
+  max-height: none;
+  margin: 0;
+  padding: max(1rem, env(safe-area-inset-top)) 1rem max(1rem, env(safe-area-inset-bottom));
+  border: 0;
+  background: transparent;
+  color: inherit;
+}
+
+.event-detail-dialog[open] {
+  display: grid;
+  place-items: center;
+}
+
+.event-detail-dialog::backdrop {
+  background: color-mix(in srgb, theme("colors.neutral.900") 50%, transparent);
+}
+
 .btn-ghost-cal {
   @apply inline-flex size-8 items-center justify-center rounded-md text-sm text-ink-muted hover:bg-white/[0.05] hover:text-ink focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent;
 }

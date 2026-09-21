@@ -5,7 +5,7 @@ import { Container } from "@/components/layout/Container";
 
 export function SiteFooter() {
   const pathname = usePathname();
-  if (pathname === "/") return null;
+  if (pathname === "/" || pathname.startsWith("/e/")) return null;
 
   return (
     <footer className="relative border-t border-border pb-[env(safe-area-inset-bottom)]">

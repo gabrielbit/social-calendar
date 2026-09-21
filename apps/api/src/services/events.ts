@@ -134,16 +134,27 @@ async function resolveEventContact(
 
   const instagram = input.contactInstagram !== undefined
     ? requiredNormalize(input.contactInstagram, normalizeInstagramHandle, "Usuario de Instagram inválido")
-    : (legacy.instagram ?? (allowContact ? (profile?.instagram_handle ?? null) : null));
+    : legacy.instagram;
   const whatsapp = input.contactWhatsapp !== undefined
     ? requiredNormalize(input.contactWhatsapp, normalizeWhatsAppPhone, "WhatsApp inválido. Usá código de país, por ejemplo +54 9 11…")
-    : (legacy.whatsapp ?? (allowContact ? (profile?.whatsapp_phone ?? null) : null));
+    : legacy.whatsapp;
   const email = input.contactEmail !== undefined
     ? requiredNormalize(input.contactEmail, normalizeContactEmail, "Email de contacto inválido")
-    : (legacy.email ?? (allowContact ? (profile?.contact_email ?? null) : null));
+    : legacy.email;
+
+  // El evento hereda el contacto del perfil solo si no declaró ningún canal
+  // propio: heredar canal por canal mezclaba ambos contactos en la misma vista.
+  const declaredOwnContact = Boolean(instagram || whatsapp || email);
+  const inherited = !declaredOwnContact && opts.fillFromProfile && allowContact
+    ? {
+        instagram: profile?.instagram_handle ?? null,
+        whatsapp: profile?.whatsapp_phone ?? null,
+        email: profile?.contact_email ?? null,
+      }
+    : { instagram, whatsapp, email };
 
   const channels = allowContact
-    ? { instagram, whatsapp, email }
+    ? inherited
     : { instagram: null, whatsapp: null, email: null };
   const legacyOut = toLegacyContact(channels);
 

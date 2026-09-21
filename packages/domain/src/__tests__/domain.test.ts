@@ -10,7 +10,9 @@ import {
   normalizeContactEmail,
   normalizeInstagramHandle,
   normalizeWhatsAppPhone,
+  resolveContactDisplay,
 } from "../contact.js";
+import { buildGoogleMapsUrl } from "../maps.js";
 import { parseIcs, parseFlyerText } from "../ingest.js";
 
 describe("sanitizeHtml", () => {
@@ -107,6 +109,45 @@ describe("contact channels", () => {
     expect(normalizeContactEmail(" Ana@Example.com ")).toBe("ana@example.com");
     expect(hasPublicContact({ allowContact: false, instagram: "x", whatsapp: null, email: null })).toBe(false);
     expect(hasPublicContact({ allowContact: true, instagram: "x", whatsapp: null, email: null })).toBe(true);
+  });
+
+  it("never mixes event contact with organizer contact", () => {
+    const organizer = {
+      allowContact: true,
+      instagram: "promotora",
+      whatsapp: "5491123456789",
+      email: "promotora@example.com",
+    };
+
+    const partialEvent = {
+      allowContact: true,
+      instagram: "banda",
+      whatsapp: null,
+      email: null,
+    };
+    expect(resolveContactDisplay(partialEvent, organizer)).toEqual({
+      channels: partialEvent,
+      source: "event",
+    });
+
+    const emptyEvent = { allowContact: true, instagram: null, whatsapp: null, email: null };
+    expect(resolveContactDisplay(emptyEvent, organizer)).toEqual({
+      channels: organizer,
+      source: "organizer",
+    });
+
+    const optedOut = { allowContact: false, instagram: null, whatsapp: null, email: null };
+    expect(resolveContactDisplay(optedOut, organizer)).toBeNull();
+    expect(resolveContactDisplay(emptyEvent, null)).toBeNull();
+  });
+});
+
+describe("maps", () => {
+  it("builds a google maps search url", () => {
+    expect(buildGoogleMapsUrl("Niceto Vega 5510, Palermo")).toBe(
+      "https://www.google.com/maps/search/?api=1&query=Niceto%20Vega%205510%2C%20Palermo",
+    );
+    expect(buildGoogleMapsUrl("   ")).toBeNull();
   });
 });
 

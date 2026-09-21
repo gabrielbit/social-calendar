@@ -172,7 +172,7 @@ export default async function AgendaPage({ params, searchParams }: Props) {
           {showList ? (
             <EventDayList
               events={events}
-              hrefFor={(event) => `/a/${agendaSlug}/e/${event.occurrence_id}`}
+              hrefFor={(event) => `/e/${event.occurrence_id}`}
               empty={
                 <div className="rounded-2xl border border-border px-6 py-16 text-center">
                   <p className="text-pretty text-ink-muted">No hay eventos en este rango.</p>

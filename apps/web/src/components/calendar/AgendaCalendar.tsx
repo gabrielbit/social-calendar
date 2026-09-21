@@ -17,7 +17,7 @@ type AgendaCalendarProps = {
   className?: string;
 };
 
-export function AgendaCalendar({ occurrences, agendaSlug, className }: AgendaCalendarProps) {
+export function AgendaCalendar({ occurrences, className }: AgendaCalendarProps) {
   const router = useRouter();
 
   const events = useMemo(
@@ -50,7 +50,7 @@ export function AgendaCalendar({ occurrences, agendaSlug, className }: AgendaCal
         height="auto"
         events={events}
         eventClick={(info) => {
-          router.push(`/a/${agendaSlug}/e/${info.event.id}`);
+          router.push(`/e/${info.event.id}`);
         }}
         eventDidMount={(info) => {
           const attribution = info.event.extendedProps.attribution as string | undefined;

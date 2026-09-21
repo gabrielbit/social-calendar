@@ -1,5 +1,6 @@
 import Link from "next/link";
 import Image from "next/image";
+import type { MouseEvent } from "react";
 import { CheckCircle2, Instagram, Rss } from "lucide-react";
 import { formatDuration, formatEventClock } from "@/lib/dates";
 import type { HomeCalendarEvent } from "@/lib/types";
@@ -9,6 +10,7 @@ type EventTileProps = {
   event: HomeCalendarEvent;
   compact?: boolean;
   month?: boolean;
+  onOpen?: (occurrenceId: string) => void;
 };
 
 function tileTexture(title: string): string {
@@ -23,7 +25,7 @@ function tileTexture(title: string): string {
   return `repeating-linear-gradient(${angle}deg, ${start} 0 ${band}px, #0C0A16 ${band}px ${Math.round(band * 2.4)}px)`;
 }
 
-export function EventTile({ event, compact = false, month = false }: EventTileProps) {
+export function EventTile({ event, compact = false, month = false, onOpen }: EventTileProps) {
   const href = `/e/${event.occurrence_id}`;
   const start = formatEventClock(event.starts_at, event.timezone, event.all_day);
   const end = event.all_day ? null : formatEventClock(event.ends_at, event.timezone, false);
@@ -31,12 +33,21 @@ export function EventTile({ event, compact = false, month = false }: EventTilePr
   const hasIg = Boolean(event.site_url?.includes("instagram.com"));
   const Icon = event.going ? CheckCircle2 : Rss;
 
+  function handleClick(eventClick: MouseEvent<HTMLAnchorElement>) {
+    if (!onOpen) return;
+    if (eventClick.metaKey || eventClick.ctrlKey || eventClick.shiftKey || eventClick.altKey) return;
+    if (eventClick.button !== 0) return;
+    eventClick.preventDefault();
+    onOpen(event.occurrence_id);
+  }
+
   if (month) {
     return (
       <Link
         href={href}
         aria-label={`${event.title}, ${start}`}
         className="cal-month-wrap"
+        onClick={handleClick}
       >
         <span
           className={cn(
@@ -79,6 +90,7 @@ export function EventTile({ event, compact = false, month = false }: EventTilePr
       aria-label={`${event.title}, ${start}`}
       className={cn("cal-tile", compact && "cal-tile-compact", event.going && "cal-tile-going")}
       style={{ backgroundImage: tileTexture(event.title) }}
+      onClick={handleClick}
     >
       {event.cover_image_url ? (
         <Image

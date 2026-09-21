@@ -43,6 +43,11 @@ export default async function ContextualEventPage({ params }: Props) {
       <EventDetailView
         occurrence={occurrence}
         agendaSlug={agendaSlug}
+        curatedFrom={
+          profile.slug !== occurrence.event.author?.slug
+            ? { slug: profile.slug, display_name: profile.display_name }
+            : null
+        }
         showCanonicalLink
         canEdit={Boolean(
           user && (user.id === occurrence.event.author_id || user.id === occurrence.event.author?.id),

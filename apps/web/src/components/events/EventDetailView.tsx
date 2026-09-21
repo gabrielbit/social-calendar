@@ -1,144 +1,188 @@
-import Image from "next/image";
+"use client";
+
 import Link from "next/link";
-import { MapPin, Globe, Pencil, Ticket } from "lucide-react";
+import { Pencil } from "lucide-react";
+import { buildGoogleMapsUrl, resolveContactDisplay } from "@agenda/domain";
 import { ContactLinks } from "@/components/contact/ContactLinks";
 import { EventActions } from "@/components/events/EventActions";
-import { formatEventDate, formatEventTime } from "@/lib/dates";
+import { EventFlyer } from "@/components/events/EventFlyer";
+import { InstagramSource } from "@/components/events/InstagramSource";
+import { formatEventClock, formatEventDate } from "@/lib/dates";
 import type { OccurrenceDetail } from "@/lib/types";
 
 type EventDetailViewProps = {
   occurrence: OccurrenceDetail;
   agendaSlug?: string;
+  curatedFrom?: { slug: string; display_name: string } | null;
   showCanonicalLink?: boolean;
   canEdit?: boolean;
 };
 
+function dedupeLocationParts(parts: string[]): string[] {
+  const clean = [...new Set(parts.map((part) => part.trim()).filter(Boolean))];
+  return clean.filter(
+    (part, index) =>
+      !clean.some(
+        (other, otherIndex) =>
+          otherIndex !== index &&
+          other.length >= part.length &&
+          other.toLowerCase().includes(part.toLowerCase()),
+      ),
+  );
+}
+
+function isInstagramUrl(url: string | null): url is string {
+  if (!url) return false;
+  try {
+    return new URL(url).hostname.replace(/^www\./, "").endsWith("instagram.com");
+  } catch {
+    return false;
+  }
+}
+
+function capitalize(value: string): string {
+  if (!value) return value;
+  return value.charAt(0).toUpperCase() + value.slice(1);
+}
+
 export function EventDetailView({
   occurrence,
   agendaSlug,
+  curatedFrom = null,
   showCanonicalLink = false,
   canEdit = false,
 }: EventDetailViewProps) {
   const { event } = occurrence;
-  const dateLabel = formatEventDate(
-    occurrence.starts_at,
-    occurrence.timezone,
-    occurrence.all_day,
-  );
-  const timeLabel = formatEventTime(
-    occurrence.starts_at,
-    occurrence.ends_at,
-    occurrence.timezone,
-    occurrence.all_day,
-  );
+  const author = event.author;
 
-  const locationParts = [
-    event.venue?.name,
-    event.venue?.address,
-    event.venue?.zone,
-    event.venue?.city,
-  ].filter(Boolean);
-  const location = locationParts.join(", ") || undefined;
+  const dateLabel = capitalize(
+    formatEventDate(occurrence.starts_at, occurrence.timezone, occurrence.all_day),
+  );
+  const startClock = formatEventClock(
+    occurrence.starts_at,
+    occurrence.timezone,
+    occurrence.all_day,
+  );
+  const whenLabel = occurrence.all_day ? dateLabel : `${dateLabel} · ${startClock}`;
+
+  const placeLine = [event.venue?.name, event.venue?.zone].filter(Boolean).join(" · ");
+  const mapsQuery = dedupeLocationParts(
+    [event.venue?.name, event.venue?.address, event.venue?.zone, event.venue?.city].filter(
+      Boolean,
+    ) as string[],
+  ).join(", ");
+  const mapsUrl = mapsQuery ? buildGoogleMapsUrl(mapsQuery) : null;
+  const locationForCalendar = mapsQuery || placeLine || undefined;
+
+  const priceLabel = event.is_free ? "gratis" : event.price_label;
+  const goingLabel =
+    occurrence.going_count > 0
+      ? occurrence.going_count === 1
+        ? "1 confirmado"
+        : `${occurrence.going_count} confirmados`
+      : null;
+  const metaParts = [placeLine || null, priceLabel, goingLabel].filter(Boolean);
+
+  const images = [event.cover_image_url, ...(event.gallery_urls ?? [])].filter(
+    (src): src is string => Boolean(src),
+  );
+  const instagramUrl = isInstagramUrl(event.site_url) ? event.site_url : null;
+
+  const contact = resolveContactDisplay(
+    {
+      allowContact: event.allow_contact,
+      instagram: event.contact_instagram,
+      whatsapp: event.contact_whatsapp,
+      email: event.contact_email,
+    },
+    author
+      ? {
+          allowContact: author.allow_contact ?? false,
+          instagram: author.instagram_handle ?? null,
+          whatsapp: author.whatsapp_phone ?? null,
+          email: author.contact_email ?? null,
+        }
+      : null,
+  );
 
   return (
-    <article className="mx-auto max-w-2xl">
-      {event.cover_image_url ? (
-        <div
-          className={`relative aspect-[16/10] overflow-hidden rounded-2xl ${event.gallery_urls && event.gallery_urls.length > 0 ? "mb-4" : "mb-8"}`}
-        >
-          <Image
-            src={event.cover_image_url}
-            alt=""
-            fill
-            className="object-cover"
-            priority
-            sizes="(max-width: 768px) 100vw, 672px"
-          />
-        </div>
-      ) : null}
-
-      {event.gallery_urls && event.gallery_urls.length > 0 ? (
-        <div className="mb-8 grid grid-cols-3 gap-2">
-          {event.gallery_urls.map((src) => (
-            <div key={src} className="relative aspect-square overflow-hidden rounded-xl">
-              <Image src={src} alt="" fill className="object-cover" sizes="200px" />
-            </div>
-          ))}
-        </div>
-      ) : null}
-
-      <header className="mb-8">
-        <p className="text-sm text-accent">{dateLabel}</p>
-        {timeLabel ? <p className="mt-0.5 text-sm tabular-nums text-ink-muted">{timeLabel}</p> : null}
-        <div className="mt-3 flex flex-wrap items-start justify-between gap-3">
-          <h1 className="text-3xl font-semibold text-balance text-ink sm:text-5xl">
-            {event.title}
-          </h1>
-          {canEdit ? (
-            <Link href={`/events/${event.id}/edit`} className="btn-secondary shrink-0">
-              <Pencil className="size-4" aria-hidden />
-              Editar evento
-            </Link>
-          ) : null}
-        </div>
-        {event.author ? (
-          <p className="mt-3 text-sm text-ink-muted">
-            Por{" "}
-            <Link href={`/a/${event.author.slug}`} className="text-ink hover:text-white">
-              {event.author.display_name}
+    <EventFlyer images={images} title={event.title}>
+      <div className="flex items-center gap-2">
+        <p className="text-[12.5px] text-accent-300">{whenLabel}</p>
+        {curatedFrom ? (
+          <p className="text-[11.5px] text-neutral-500">
+            · curado de{" "}
+            <Link href={`/a/${curatedFrom.slug}`} className="hover:text-accent-300">
+              @{curatedFrom.slug}
             </Link>
           </p>
         ) : null}
-      </header>
+      </div>
 
-      {event.location_mode !== "online" && location ? (
-        <p className="mb-3 flex items-start gap-2 text-sm text-ink-muted">
-          <MapPin className="mt-0.5 size-4 shrink-0" aria-hidden />
-          {location}
+      <div className="flex items-start justify-between gap-3">
+        <h1 id="event-detail-title" className="text-balance text-[20px] font-medium leading-tight text-ink">
+          {event.title}
+        </h1>
+        {canEdit ? (
+          <Link href={`/events/${event.id}/edit`} className="btn-secondary shrink-0 text-[13px]">
+            <Pencil className="size-3.5" aria-hidden />
+            Editar evento
+          </Link>
+        ) : null}
+      </div>
+
+      {metaParts.length > 0 ? (
+        <p className="text-pretty text-sm text-neutral-300">
+          {placeLine && mapsUrl ? (
+            <a
+              href={mapsUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="underline decoration-divider underline-offset-4 hover:text-accent-300 hover:decoration-accent-300"
+            >
+              {placeLine}
+            </a>
+          ) : (
+            placeLine
+          )}
+          {placeLine && (priceLabel || goingLabel) ? " · " : null}
+          {[priceLabel, goingLabel].filter(Boolean).join(" · ")}
         </p>
       ) : null}
 
       {event.online_url ? (
-        <p className="mb-3 flex items-center gap-2 text-sm">
-          <Globe className="size-4 text-ink-faint" aria-hidden />
+        <p className="text-sm">
           <a
             href={event.online_url}
-            className="text-ink hover:text-white"
             target="_blank"
             rel="noopener noreferrer"
+            className="text-accent-300 hover:text-accent-200"
           >
             Enlace online
           </a>
         </p>
       ) : null}
 
-      {event.tickets_url || event.price_label ? (
-        <p className="mb-3 flex items-center gap-2 text-sm text-ink-muted">
-          <Ticket className="size-4" aria-hidden />
-          {event.is_free ? "Gratis" : event.price_label}
-          {event.tickets_url ? (
-            <>
-              {" · "}
-              <a
-                href={event.tickets_url}
-                className="text-ink hover:text-white"
-                target="_blank"
-                rel="noopener noreferrer"
-              >
-                Comprar entradas
-              </a>
-            </>
-          ) : null}
+      {event.tickets_url ? (
+        <p className="text-sm">
+          <a
+            href={event.tickets_url}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-accent-300 hover:text-accent-200"
+          >
+            Comprar entradas
+          </a>
         </p>
       ) : null}
 
       {event.tags && event.tags.length > 0 ? (
-        <div className="mb-8 mt-6 flex flex-wrap gap-2">
+        <div className="flex flex-wrap gap-1.5">
           {event.tags.map((tag) => (
             <Link
               key={tag.slug}
               href={`/explorar?tag=${tag.slug}`}
-              className="rounded-full border border-border px-3 py-1 text-xs text-ink-muted hover:border-white/20 hover:text-ink"
+              className="rounded-md bg-neutral-800 px-2.5 py-0.5 text-[11px] text-neutral-100 hover:bg-accent-800"
             >
               {tag.name}
             </Link>
@@ -148,26 +192,39 @@ export function EventDetailView({
 
       {event.description_html ? (
         <div
-          className="prose prose-invert mb-10 max-w-none text-pretty text-ink-muted prose-a:text-ink"
+          className="prose prose-invert max-w-none text-pretty text-sm text-neutral-300 prose-a:text-accent-300"
           dangerouslySetInnerHTML={{ __html: event.description_html }}
         />
       ) : null}
 
-      {event.allow_contact && (event.contact_instagram || event.contact_whatsapp || event.contact_email) ? (
-        <section className="mb-8">
-          <p className="mb-3 text-sm font-medium text-ink">Contacto del evento</p>
+      {instagramUrl ? <InstagramSource url={instagramUrl} /> : null}
+
+      {contact ? (
+        <section>
+          <p className="mb-2 text-[12.5px] text-ink">
+            {contact.source === "event" ? "Contacto del evento" : "Contacto del organizador"}
+          </p>
           <ContactLinks
-            contact={{
-              allowContact: event.allow_contact,
-              instagram: event.contact_instagram,
-              whatsapp: event.contact_whatsapp,
-              email: event.contact_email,
-            }}
+            contact={contact.channels}
             message={`Hola! Vi “${event.title}” en Agenda Comunidad`}
             emailSubject={event.title}
           />
         </section>
       ) : null}
+
+      <div className="border-t border-divider pt-2.5 text-xs text-neutral-600">
+        {author ? (
+          <>
+            Publicado por{" "}
+            <Link href={`/a/${author.slug}`} className="text-neutral-400 hover:text-accent-300">
+              {author.display_name}
+            </Link>
+            {showCanonicalLink ? null : " · esta página es la canónica de la ocurrencia"}
+          </>
+        ) : (
+          "esta página es la canónica de la ocurrencia"
+        )}
+      </div>
 
       <EventActions
         occurrenceId={occurrence.id}
@@ -177,17 +234,17 @@ export function EventDetailView({
         allDay={occurrence.all_day}
         timezone={occurrence.timezone}
         description={event.description_html?.replace(/<[^>]+>/g, " ")}
-        location={location}
+        location={locationForCalendar}
         canonicalPath={showCanonicalLink ? `/e/${occurrence.id}` : undefined}
       />
 
       {agendaSlug ? (
-        <p className="mt-10 text-center text-sm text-ink-faint">
-          <Link href={`/a/${agendaSlug}`} className="hover:text-ink">
+        <p className="text-sm text-neutral-500">
+          <Link href={`/a/${agendaSlug}`} className="hover:text-accent-300">
             ← Volver a la agenda
           </Link>
         </p>
       ) : null}
-    </article>
+    </EventFlyer>
   );
 }

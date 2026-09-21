@@ -67,7 +67,10 @@ export async function getOccurrenceDetail(
         cover_image_url, gallery_urls, author_id, timezone, allow_contact,
         contact_instagram, contact_whatsapp, contact_email,
         contact_type, contact_value,
-        author:profiles!events_author_id_fkey ( id, slug, display_name, avatar_url ),
+        author:profiles!events_author_id_fkey (
+          id, slug, display_name, avatar_url,
+          allow_contact, instagram_handle, whatsapp_phone, contact_email
+        ),
         venue:venues ( name, address, zone, city ),
         event_tags ( tag:tags ( id, slug, name ) )
       )
@@ -77,6 +80,12 @@ export async function getOccurrenceDetail(
     .maybeSingle();
 
   if (!occurrence?.event) return null;
+
+  const { count: goingCount } = await supabase
+    .from("event_rsvps")
+    .select("id", { count: "exact", head: true })
+    .eq("occurrence_id", occurrenceId)
+    .eq("status", "going");
 
   const raw = occurrence as Record<string, unknown>;
   const nestedEvent = Array.isArray(raw.event) ? raw.event[0] : raw.event;
@@ -94,6 +103,7 @@ export async function getOccurrenceDetail(
     all_day: raw.all_day as boolean,
     timezone: raw.timezone as string,
     cancelled: raw.cancelled as boolean,
+    going_count: goingCount ?? 0,
     event: {
       ...(eventRaw as OccurrenceDetail["event"]),
       id: String(eventRaw.id),

@@ -14,6 +14,7 @@ import {
 } from "lucide-react";
 import { EventTile } from "@/components/calendar/EventTile";
 import { DaySearchPanel } from "@/components/calendar/DaySearchPanel";
+import { EventDetailOverlay } from "@/components/events/EventDetailOverlay";
 import { GoogleCalendarIcon } from "@/components/icons/GoogleCalendarIcon";
 import {
   birthdayMatchesDay,
@@ -78,6 +79,7 @@ export function HomeCalendar({ events, personal, birthdays, googleConnected }: H
   const [mode, setMode] = useState<CalMode>("semana");
   const [cursor, setCursor] = useState(() => new Date());
   const [focusDay, setFocusDay] = useState<string | null>(null);
+  const [openOccurrenceId, setOpenOccurrenceId] = useState<string | null>(null);
   const [layers, setLayers] = useState<LayerState>({
     siguiendo: true,
     voy: true,
@@ -139,6 +141,7 @@ export function HomeCalendar({ events, personal, birthdays, googleConnected }: H
     : "repeat(7, minmax(0, 1fr))";
 
   return (
+    <>
     <div className="flex h-[calc(100dvh-3.5rem-env(safe-area-inset-top))] flex-col px-3 pb-3 pt-2 sm:px-4">
       <div className="flex flex-wrap items-center gap-2 px-0.5 pb-2">
         <button type="button" onClick={goPrev} className="btn-ghost-cal" aria-label="Anterior">
@@ -245,6 +248,11 @@ export function HomeCalendar({ events, personal, birthdays, googleConnected }: H
                     key={item.occurrence_id}
                     href={`/e/${item.occurrence_id}`}
                     className="flex items-center gap-1.5 rounded-md border-l-2 border-ink-faint bg-surface px-2 py-1"
+                    onClick={(event) => {
+                      if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+                      event.preventDefault();
+                      setOpenOccurrenceId(item.occurrence_id);
+                    }}
                   >
                     <Lock className="size-3 shrink-0 text-ink-faint" aria-hidden />
                     <span className="text-[11px] tabular-nums text-ink-muted">
@@ -285,7 +293,12 @@ export function HomeCalendar({ events, personal, birthdays, googleConnected }: H
                       style={{ flex: slot.events.some((event) => event.going) ? "1.8" : "1" }}
                     >
                       {slot.events.map((event) => (
-                        <EventTile key={event.occurrence_id} event={event} compact={compact} />
+                        <EventTile
+                          key={event.occurrence_id}
+                          event={event}
+                          compact={compact}
+                          onOpen={setOpenOccurrenceId}
+                        />
                       ))}
                     </div>
                   ))}
@@ -336,7 +349,12 @@ export function HomeCalendar({ events, personal, birthdays, googleConnected }: H
                   {day.slots.map((slot) => (
                     <div key={slot.time} className="flex min-h-0 flex-1 gap-0.5">
                       {slot.events.map((event) => (
-                        <EventTile key={event.occurrence_id} event={event} month />
+                        <EventTile
+                          key={event.occurrence_id}
+                          event={event}
+                          month
+                          onOpen={setOpenOccurrenceId}
+                        />
                       ))}
                     </div>
                   ))}
@@ -347,6 +365,13 @@ export function HomeCalendar({ events, personal, birthdays, googleConnected }: H
         </div>
       )}
     </div>
+    {openOccurrenceId ? (
+      <EventDetailOverlay
+        occurrenceId={openOccurrenceId}
+        onDismiss={() => setOpenOccurrenceId(null)}
+      />
+    ) : null}
+    </>
   );
 }
 

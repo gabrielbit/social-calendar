@@ -70,6 +70,10 @@ export type EventDetail = {
     slug: string;
     display_name: string;
     avatar_url: string | null;
+    allow_contact?: boolean;
+    instagram_handle?: string | null;
+    whatsapp_phone?: string | null;
+    contact_email?: string | null;
   };
   venue?: {
     name: string;
@@ -88,6 +92,7 @@ export type OccurrenceDetail = {
   all_day: boolean;
   timezone: string;
   cancelled: boolean;
+  going_count: number;
   event: EventDetail;
 };
 

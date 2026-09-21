@@ -19,6 +19,7 @@ import {
 import { formatEventDate, formatEventTime, appUrl } from "@/lib/dates";
 import { clientApiPut } from "@/lib/api-client";
 import { cn } from "@/lib/utils";
+import { useEventDetailClose } from "@/components/events/EventDetailDialog";
 
 type EventActionsProps = {
   occurrenceId: string;
@@ -47,6 +48,7 @@ export function EventActions({
   showRsvp = true,
   className,
 }: EventActionsProps) {
+  const close = useEventDetailClose();
   const [rsvp, setRsvp] = useState<"going" | "not_going" | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [needsLogin, setNeedsLogin] = useState(false);
@@ -112,6 +114,11 @@ export function EventActions({
   return (
     <div className={cn("flex flex-col gap-3", className)}>
       <div className="flex flex-wrap gap-2">
+        {close ? (
+          <button type="button" onClick={close} className="btn-secondary text-sm">
+            Cerrar
+          </button>
+        ) : null}
         <a
           href={whatsappUrl}
           target="_blank"

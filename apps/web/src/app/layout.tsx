@@ -24,7 +24,13 @@ export const viewport: Viewport = {
   themeColor: "#0C0A16",
 };
 
-export default function RootLayout({ children }: { children: React.ReactNode }) {
+export default function RootLayout({
+  children,
+  modal,
+}: {
+  children: React.ReactNode;
+  modal: React.ReactNode;
+}) {
   return (
     <html lang="es" className={sans.variable}>
       <body className="min-h-dvh bg-canvas font-sans">
@@ -34,6 +40,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         />
         <Nav />
         <main className="relative pt-[calc(3.5rem+env(safe-area-inset-top))]">{children}</main>
+        {modal}
         <SiteFooter />
       </body>
     </html>
