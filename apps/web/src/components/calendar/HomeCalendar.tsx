@@ -292,11 +292,7 @@ export function HomeCalendar({ events, personal, birthdays, googleConnected }: H
                   ) : null}
 
                   {day.slots.map((slot) => (
-                    <div
-                      key={slot.time}
-                      className="slot flex min-h-0 gap-1.5"
-                      style={{ flex: slot.events.some((event) => event.going) ? "1.8" : "1" }}
-                    >
+                    <div key={slot.time} className="slot flex min-h-0 flex-none items-start gap-1.5">
                       {slot.events.map((event) => (
                         <EventTile
                           key={event.occurrence_id}

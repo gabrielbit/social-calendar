@@ -1,8 +1,11 @@
+"use client";
+
 import Link from "next/link";
 import Image from "next/image";
 import type { MouseEvent } from "react";
 import { CheckCircle2, Instagram, Rss } from "lucide-react";
 import { formatDuration, formatEventClock } from "@/lib/dates";
+import { VERTICAL_RATIO, useFlyerRatio } from "@/lib/flyer-ratio";
 import type { HomeCalendarEvent } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
@@ -32,6 +35,8 @@ export function EventTile({ event, compact = false, month = false, onOpen }: Eve
   const duration = formatDuration(event.starts_at, event.ends_at, event.all_day);
   const hasIg = Boolean(event.site_url?.includes("instagram.com"));
   const Icon = event.going ? CheckCircle2 : Rss;
+  const coverRatio = useFlyerRatio(month || compact ? undefined : (event.cover_image_url ?? undefined));
+  const portraitCover = coverRatio !== null && coverRatio > VERTICAL_RATIO;
 
   function handleClick(eventClick: MouseEvent<HTMLAnchorElement>) {
     if (!onOpen) return;
@@ -88,7 +93,12 @@ export function EventTile({ event, compact = false, month = false, onOpen }: Eve
     <Link
       href={href}
       aria-label={`${event.title}, ${start}`}
-      className={cn("cal-tile", compact && "cal-tile-compact", event.going && "cal-tile-going")}
+      className={cn(
+        "cal-tile",
+        compact && "cal-tile-compact",
+        event.going && "cal-tile-going",
+        !compact && (portraitCover ? "cal-tile-portrait" : "cal-tile-landscape"),
+      )}
       style={{ backgroundImage: tileTexture(event.title) }}
       onClick={handleClick}
     >
