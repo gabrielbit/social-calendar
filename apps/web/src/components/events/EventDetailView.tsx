@@ -1,6 +1,6 @@
 import Image from "next/image";
 import Link from "next/link";
-import { MapPin, Globe, Ticket } from "lucide-react";
+import { MapPin, Globe, Pencil, Ticket } from "lucide-react";
 import { ContactLinks } from "@/components/contact/ContactLinks";
 import { EventActions } from "@/components/events/EventActions";
 import { formatEventDate, formatEventTime } from "@/lib/dates";
@@ -10,12 +10,14 @@ type EventDetailViewProps = {
   occurrence: OccurrenceDetail;
   agendaSlug?: string;
   showCanonicalLink?: boolean;
+  canEdit?: boolean;
 };
 
 export function EventDetailView({
   occurrence,
   agendaSlug,
   showCanonicalLink = false,
+  canEdit = false,
 }: EventDetailViewProps) {
   const { event } = occurrence;
   const dateLabel = formatEventDate(
@@ -41,7 +43,9 @@ export function EventDetailView({
   return (
     <article className="mx-auto max-w-2xl">
       {event.cover_image_url ? (
-        <div className="relative mb-8 aspect-[16/10] overflow-hidden rounded-2xl">
+        <div
+          className={`relative aspect-[16/10] overflow-hidden rounded-2xl ${event.gallery_urls && event.gallery_urls.length > 0 ? "mb-4" : "mb-8"}`}
+        >
           <Image
             src={event.cover_image_url}
             alt=""
@@ -53,12 +57,30 @@ export function EventDetailView({
         </div>
       ) : null}
 
+      {event.gallery_urls && event.gallery_urls.length > 0 ? (
+        <div className="mb-8 grid grid-cols-3 gap-2">
+          {event.gallery_urls.map((src) => (
+            <div key={src} className="relative aspect-square overflow-hidden rounded-xl">
+              <Image src={src} alt="" fill className="object-cover" sizes="200px" />
+            </div>
+          ))}
+        </div>
+      ) : null}
+
       <header className="mb-8">
         <p className="text-sm text-accent">{dateLabel}</p>
         {timeLabel ? <p className="mt-0.5 text-sm tabular-nums text-ink-muted">{timeLabel}</p> : null}
-        <h1 className="mt-3 text-3xl font-semibold text-balance text-ink sm:text-5xl">
-          {event.title}
-        </h1>
+        <div className="mt-3 flex flex-wrap items-start justify-between gap-3">
+          <h1 className="text-3xl font-semibold text-balance text-ink sm:text-5xl">
+            {event.title}
+          </h1>
+          {canEdit ? (
+            <Link href={`/events/${event.id}/edit`} className="btn-secondary shrink-0">
+              <Pencil className="size-4" aria-hidden />
+              Editar evento
+            </Link>
+          ) : null}
+        </div>
         {event.author ? (
           <p className="mt-3 text-sm text-ink-muted">
             Por{" "}
@@ -103,7 +125,7 @@ export function EventDetailView({
                 target="_blank"
                 rel="noopener noreferrer"
               >
-                Entradas
+                Comprar entradas
               </a>
             </>
           ) : null}

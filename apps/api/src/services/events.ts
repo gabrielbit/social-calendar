@@ -29,6 +29,39 @@ function invalidContact(message: string): Error {
   return Object.assign(new Error(message), { statusCode: 400 });
 }
 
+async function findOrCreateVenue(userId: string, locationLabel: string): Promise<string> {
+  const db = createServiceClient();
+  const label = locationLabel.trim();
+  const name = label.split(",")[0]?.trim() || label;
+
+  const { data: existing } = await db
+    .from("venues")
+    .select("id")
+    .eq("created_by", userId)
+    .eq("address", label)
+    .maybeSingle();
+  if (existing?.id) return existing.id as string;
+
+  const { data, error } = await db
+    .from("venues")
+    .insert({ name, address: label, created_by: userId })
+    .select("id")
+    .single();
+  if (error || !data) {
+    throw new Error(error?.message ?? "No se pudo guardar el lugar");
+  }
+  return data.id as string;
+}
+
+async function venueIdFromLabel(
+  userId: string,
+  locationLabel: string | null | undefined,
+): Promise<string | null | undefined> {
+  if (locationLabel === undefined) return undefined;
+  if (!locationLabel || !locationLabel.trim()) return null;
+  return findOrCreateVenue(userId, locationLabel);
+}
+
 function requiredNormalize<T>(
   raw: string | null | undefined,
   normalize: (value: string | null | undefined) => T | null,
@@ -146,6 +179,10 @@ export async function createEvent(userId: string, input: CreateEventInput) {
   const horizonEnd = new Date(startsAt);
   horizonEnd.setUTCMonth(horizonEnd.getUTCMonth() + OCCURRENCE_HORIZON_MONTHS);
   const contact = await resolveEventContact(userId, parsed, { fillFromProfile: true });
+  const venueId =
+    parsed.venueId !== undefined && parsed.venueId !== null
+      ? parsed.venueId
+      : ((await venueIdFromLabel(userId, parsed.locationLabel)) ?? null);
 
   const { data: event, error: eventError } = await db
     .from("events")
@@ -163,7 +200,7 @@ export async function createEvent(userId: string, input: CreateEventInput) {
       timezone: parsed.timezone,
       rrule: parsed.rrule ?? null,
       location_mode: parsed.locationMode,
-      venue_id: parsed.venueId ?? null,
+      venue_id: venueId,
       online_url: parsed.onlineUrl ?? null,
       site_url: parsed.siteUrl ?? null,
       tickets_url: parsed.ticketsUrl ?? null,
@@ -257,7 +294,11 @@ export async function updateEvent(userId: string, eventId: string, input: Update
   if (parsed.timezone !== undefined) patch.timezone = parsed.timezone;
   if (parsed.rrule !== undefined) patch.rrule = parsed.rrule;
   if (parsed.locationMode !== undefined) patch.location_mode = parsed.locationMode;
-  if (parsed.venueId !== undefined) patch.venue_id = parsed.venueId;
+  if (parsed.locationLabel !== undefined) {
+    patch.venue_id = (await venueIdFromLabel(userId, parsed.locationLabel)) ?? null;
+  } else if (parsed.venueId !== undefined) {
+    patch.venue_id = parsed.venueId;
+  }
   if (parsed.onlineUrl !== undefined) patch.online_url = parsed.onlineUrl;
   if (parsed.siteUrl !== undefined) patch.site_url = parsed.siteUrl;
   if (parsed.ticketsUrl !== undefined) patch.tickets_url = parsed.ticketsUrl;

@@ -30,7 +30,7 @@ export default async function NewEventPage({ searchParams }: Props) {
     <Container className="py-10 sm:py-14">
       <PageHeader
         title="Nuevo evento"
-        description="Publicá en tu agenda. Podés importar desde ICS o un flyer en Ajustes → Importar."
+        description="Publicá en tu agenda. Pegá una imagen con ⌘V o elegila desde el disco."
       />
       <EventCreateForm
         defaultDate={date}

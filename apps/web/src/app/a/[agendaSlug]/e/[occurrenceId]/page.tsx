@@ -4,6 +4,7 @@ import { Container } from "@/components/layout/Container";
 import { getOccurrenceDetail, getProfileBySlug } from "@/lib/queries";
 import type { Metadata } from "next";
 import { appUrl } from "@/lib/dates";
+import { createClient } from "@/lib/supabase/server";
 
 type Props = {
   params: Promise<{ agendaSlug: string; occurrenceId: string }>;
@@ -28,6 +29,11 @@ export default async function ContextualEventPage({ params }: Props) {
 
   if (!profile || !occurrence || occurrence.cancelled) notFound();
 
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
   return (
     <Container className="py-10 sm:py-14">
       <p className="mb-6 text-sm text-ink-faint">
@@ -38,6 +44,9 @@ export default async function ContextualEventPage({ params }: Props) {
         occurrence={occurrence}
         agendaSlug={agendaSlug}
         showCanonicalLink
+        canEdit={Boolean(
+          user && (user.id === occurrence.event.author_id || user.id === occurrence.event.author?.id),
+        )}
       />
     </Container>
   );

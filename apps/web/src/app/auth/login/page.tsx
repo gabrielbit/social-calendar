@@ -7,6 +7,7 @@ import { createClient } from "@/lib/supabase/client";
 import { appUrl } from "@/lib/dates";
 import { Container } from "@/components/layout/Container";
 import { authErrorMessage } from "@/lib/auth-errors";
+import { GoogleIcon } from "@/components/icons/GoogleIcon";
 
 export default function LoginPage() {
   const [email, setEmail] = useState("");
@@ -35,7 +36,8 @@ export default function LoginPage() {
     });
   }, []);
 
-  async function handleMagicLink() {
+  async function handleMagicLink(e: React.FormEvent) {
+    e.preventDefault();
     setError(null);
     setLoading(true);
     const supabase = createClient();
@@ -83,15 +85,29 @@ export default function LoginPage() {
     <Container className="flex min-h-[calc(100dvh-10rem)] items-center py-16">
       <div className="mx-auto w-full max-w-md text-center">
         <h1 className="page-title">Entrar</h1>
-        <p className="page-lede mx-auto">Con email, Google o un enlace mágico.</p>
+        <p className="page-lede mx-auto">Google, un enlace al mail o tu contraseña.</p>
+
+        <button type="button" onClick={handleGoogle} className="btn-primary mt-8 w-full">
+          <GoogleIcon className="size-4" />
+          Continuar con Google
+        </button>
+
+        <div className="relative my-8">
+          <div className="absolute inset-0 flex items-center">
+            <div className="w-full border-t border-border" />
+          </div>
+          <div className="relative flex justify-center text-xs uppercase">
+            <span className="bg-canvas px-2 text-ink-faint">o un enlace al mail</span>
+          </div>
+        </div>
 
         {sent ? (
-          <div className="card mt-8 text-pretty text-sm text-ink-muted" role="status">
+          <div className="card text-pretty text-sm text-ink-muted" role="status">
             Te enviamos un enlace a <strong className="text-ink">{email}</strong>. Revisá tu
             bandeja.
           </div>
         ) : (
-          <form onSubmit={handlePassword} className="mt-8 space-y-4 text-left">
+          <form onSubmit={handleMagicLink} className="space-y-4 text-left">
             <label className="block text-sm">
               <span className="text-ink-muted">Email</span>
               <input
@@ -104,28 +120,9 @@ export default function LoginPage() {
                 placeholder="tu@email.com"
               />
             </label>
-            <label className="block text-sm">
-              <span className="text-ink-muted">Contraseña</span>
-              <input
-                type="password"
-                required
-                autoComplete="current-password"
-                className="input-field mt-1.5"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-              />
-            </label>
-            <button type="submit" disabled={loading} className="btn-primary w-full">
-              {loading ? "Entrando…" : "Entrar"}
-            </button>
-            <button
-              type="button"
-              disabled={loading || !email}
-              onClick={handleMagicLink}
-              className="btn-secondary w-full"
-            >
+            <button type="submit" disabled={loading} className="btn-secondary w-full">
               <Mail className="size-4" aria-hidden />
-              Enviame un enlace
+              {loading ? "Enviando…" : "Enviame un enlace"}
             </button>
           </form>
         )}
@@ -135,13 +132,38 @@ export default function LoginPage() {
             <div className="w-full border-t border-border" />
           </div>
           <div className="relative flex justify-center text-xs uppercase">
-            <span className="bg-canvas px-2 text-ink-faint">o</span>
+            <span className="bg-canvas px-2 text-ink-faint">o con contraseña</span>
           </div>
         </div>
 
-        <button type="button" onClick={handleGoogle} className="btn-secondary w-full">
-          Continuar con Google
-        </button>
+        <form onSubmit={handlePassword} className="space-y-4 text-left">
+          <label className="block text-sm">
+            <span className="text-ink-muted">Email</span>
+            <input
+              type="email"
+              required
+              autoComplete="email"
+              className="input-field mt-1.5"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              placeholder="tu@email.com"
+            />
+          </label>
+          <label className="block text-sm">
+            <span className="text-ink-muted">Contraseña</span>
+            <input
+              type="password"
+              required
+              autoComplete="current-password"
+              className="input-field mt-1.5"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+            />
+          </label>
+          <button type="submit" disabled={loading} className="btn-secondary w-full">
+            {loading ? "Entrando…" : "Entrar con contraseña"}
+          </button>
+        </form>
 
         {error ? (
           <p className="mt-4 text-sm text-red-400" role="alert">

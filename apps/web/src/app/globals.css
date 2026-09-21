@@ -34,6 +34,12 @@
     @apply w-full rounded-xl border border-border bg-surface px-3 py-2.5 text-sm text-ink placeholder:text-ink-faint focus:border-accent/40 focus:outline-none focus:ring-2 focus:ring-accent/20;
   }
 
+  /* Google Maps a veces pinta un overlay de error sobre el input y lo deja ilegible. */
+  .input-field.gm-err-autocomplete {
+    background-image: none !important;
+    background-color: theme("colors.surface") !important;
+  }
+
   .card {
     @apply rounded-2xl border border-border bg-surface p-4;
   }
@@ -112,34 +118,24 @@
   @apply cursor-pointer rounded-md border-0 px-1;
 }
 
-.pac-container {
-  z-index: 50;
-  margin-top: 6px;
-  overflow: hidden;
+.event-datetime-dialog[open] {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  margin: 0;
+  max-width: min(calc(100vw - 2rem), 22rem);
+  max-height: min(90dvh, 40rem);
+  overflow-y: auto;
+  padding: 1rem;
   border: 1px solid theme("colors.border");
-  border-radius: 12px;
+  border-radius: 1rem;
   background: theme("colors.surface");
-  box-shadow: none;
-  font-family: inherit;
-}
-
-.pac-item {
-  color: theme("colors.ink.DEFAULT");
-  border-top: 1px solid theme("colors.border");
-  padding: 8px 12px;
-}
-
-.pac-item:hover,
-.pac-item-selected {
-  background: rgba(255, 255, 255, 0.04);
-}
-
-.pac-item-query {
   color: theme("colors.ink.DEFAULT");
 }
 
-.pac-matched {
-  color: theme("colors.accent.DEFAULT");
+.event-datetime-dialog::backdrop {
+  background: rgb(12 10 22 / 0.8);
 }
 
 .btn-ghost-cal {

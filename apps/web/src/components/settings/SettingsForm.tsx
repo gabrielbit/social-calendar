@@ -138,8 +138,14 @@ export function SettingsForm({ profile, prefs, googleConnected }: SettingsFormPr
       </label>
 
       <div className="text-sm">
-        <span className="text-ink-muted">Ubicación pública</span>
-        <LocationAutocomplete value={publicLocation} onChange={setPublicLocation} />
+        <label htmlFor="public-location" className="text-ink-muted">
+          Ubicación pública
+        </label>
+        <LocationAutocomplete
+          id="public-location"
+          value={publicLocation}
+          onChange={setPublicLocation}
+        />
       </div>
 
       <fieldset className="space-y-3 text-sm">

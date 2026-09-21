@@ -56,6 +56,7 @@ export type EventDetail = {
   is_free: boolean;
   price_label: string | null;
   cover_image_url: string | null;
+  gallery_urls: string[];
   author_id: string;
   timezone: string;
   allow_contact: boolean;
@@ -65,6 +66,7 @@ export type EventDetail = {
   contact_type: string | null;
   contact_value: string | null;
   author?: {
+    id?: string;
     slug: string;
     display_name: string;
     avatar_url: string | null;

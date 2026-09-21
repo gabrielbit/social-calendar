@@ -64,10 +64,10 @@ export async function getOccurrenceDetail(
       event:events (
         id, slug, title, description_html, visibility, editorial_status,
         location_mode, online_url, site_url, tickets_url, is_free, price_label,
-        cover_image_url, author_id, timezone, allow_contact,
+        cover_image_url, gallery_urls, author_id, timezone, allow_contact,
         contact_instagram, contact_whatsapp, contact_email,
         contact_type, contact_value,
-        author:profiles!events_author_id_fkey ( slug, display_name, avatar_url ),
+        author:profiles!events_author_id_fkey ( id, slug, display_name, avatar_url ),
         venue:venues ( name, address, zone, city ),
         event_tags ( tag:tags ( id, slug, name ) )
       )
@@ -79,8 +79,12 @@ export async function getOccurrenceDetail(
   if (!occurrence?.event) return null;
 
   const raw = occurrence as Record<string, unknown>;
-  const eventRaw = raw.event as Record<string, unknown>;
+  const nestedEvent = Array.isArray(raw.event) ? raw.event[0] : raw.event;
+  const eventRaw = nestedEvent as Record<string, unknown>;
   const eventTags = (eventRaw.event_tags as Array<{ tag: Tag }> | undefined) ?? [];
+  const authorRaw = eventRaw.author;
+  const author = (Array.isArray(authorRaw) ? authorRaw[0] : authorRaw) as OccurrenceDetail["event"]["author"];
+  const venueRaw = eventRaw.venue;
 
   return {
     id: raw.id as string,
@@ -92,10 +96,69 @@ export async function getOccurrenceDetail(
     cancelled: raw.cancelled as boolean,
     event: {
       ...(eventRaw as OccurrenceDetail["event"]),
+      id: String(eventRaw.id),
+      author_id: String(eventRaw.author_id ?? ""),
+      gallery_urls: Array.isArray(eventRaw.gallery_urls) ? (eventRaw.gallery_urls as string[]) : [],
       tags: eventTags.map((et) => et.tag).filter(Boolean),
-      author: eventRaw.author as OccurrenceDetail["event"]["author"],
-      venue: (eventRaw.venue as OccurrenceDetail["event"]["venue"]) ?? null,
+      author,
+      venue: ((Array.isArray(venueRaw) ? venueRaw[0] : venueRaw) as OccurrenceDetail["event"]["venue"]) ?? null,
     },
+  };
+}
+
+export async function getEventForEdit(eventId: string, userId: string) {
+  const supabase = await createClient();
+  const { data } = await supabase
+    .from("events")
+    .select(
+      `
+      id, title, description_html, visibility, starts_at, ends_at, all_day, rrule,
+      site_url, tickets_url, is_free, linked_birthday, cover_image_url, gallery_urls,
+      allow_contact, contact_instagram, contact_whatsapp, contact_email, author_id,
+      venue:venues ( name, address ),
+      event_tags ( tag:tags ( slug ) )
+    `,
+    )
+    .eq("id", eventId)
+    .eq("author_id", userId)
+    .is("deleted_at", null)
+    .maybeSingle();
+
+  if (!data) return null;
+
+  const tags = ((data.event_tags as unknown as Array<{ tag: { slug: string } | null }> | null) ?? [])
+    .map((row) => row.tag?.slug)
+    .filter(Boolean)
+    .join(", ");
+
+  const venueRaw = data.venue as { name: string | null; address: string | null } | { name: string | null; address: string | null }[] | null;
+  const venue = Array.isArray(venueRaw) ? venueRaw[0] : venueRaw;
+
+  const images = [
+    data.cover_image_url as string | null,
+    ...((data.gallery_urls as string[] | null) ?? []),
+  ].filter((url): url is string => Boolean(url));
+
+  return {
+    id: data.id as string,
+    title: data.title as string,
+    description: (data.description_html as string | null) ?? "",
+    visibility: data.visibility as string,
+    startsAt: data.starts_at as string,
+    endsAt: data.ends_at as string,
+    allDay: Boolean(data.all_day),
+    rrule: (data.rrule as string | null) ?? "",
+    locationLabel: [venue?.name, venue?.address].filter(Boolean).join(", "),
+    siteUrl: (data.site_url as string | null) ?? "",
+    ticketsUrl: (data.tickets_url as string | null) ?? "",
+    isFree: Boolean(data.is_free),
+    linkedBirthday: Boolean(data.linked_birthday),
+    tags,
+    images,
+    allowContact: data.allow_contact !== false,
+    instagram: (data.contact_instagram as string | null) ?? "",
+    whatsapp: (data.contact_whatsapp as string | null) ?? "",
+    email: (data.contact_email as string | null) ?? "",
   };
 }
 

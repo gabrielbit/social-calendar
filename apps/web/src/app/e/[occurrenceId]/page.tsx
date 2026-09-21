@@ -3,6 +3,7 @@ import { EventDetailView } from "@/components/events/EventDetailView";
 import { Container } from "@/components/layout/Container";
 import { getOccurrenceDetail } from "@/lib/queries";
 import { appUrl } from "@/lib/dates";
+import { createClient } from "@/lib/supabase/server";
 import type { Metadata } from "next";
 
 type Props = { params: Promise<{ occurrenceId: string }> };
@@ -85,6 +86,11 @@ export default async function CanonicalEventPage({ params }: Props) {
   const occurrence = await getOccurrenceDetail(occurrenceId);
   if (!occurrence || occurrence.cancelled) notFound();
 
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
   const jsonLd = buildJsonLd(occurrence);
 
   return (
@@ -96,7 +102,12 @@ export default async function CanonicalEventPage({ params }: Props) {
         />
       )}
       <Container className="py-10 sm:py-14">
-      <EventDetailView occurrence={occurrence} />
+      <EventDetailView
+        occurrence={occurrence}
+        canEdit={Boolean(
+          user && (user.id === occurrence.event.author_id || user.id === occurrence.event.author?.id),
+        )}
+      />
       </Container>
     </>
   );

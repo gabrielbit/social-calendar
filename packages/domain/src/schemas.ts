@@ -75,6 +75,7 @@ export const CreateEventSchema = z.object({
   rrule: z.string().max(500).nullable().optional(),
   locationMode: LocationModeSchema.default("physical"),
   venueId: z.string().uuid().nullable().optional(),
+  locationLabel: z.string().max(300).nullable().optional(),
   onlineUrl: z.string().url().nullable().optional(),
   siteUrl: z.string().url().nullable().optional(),
   ticketsUrl: z.string().url().nullable().optional(),

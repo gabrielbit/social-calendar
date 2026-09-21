@@ -158,3 +158,22 @@ export function nameInitials(name: string): string {
   const parts = name.trim().split(/\s+/).slice(0, 2);
   return parts.map((part) => part.charAt(0).toUpperCase()).join("") || "?";
 }
+
+export function localDateAt(dateKey: string, hours: number, minutes = 0): Date | null {
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(dateKey);
+  if (!match) return null;
+  return new Date(Number(match[1]), Number(match[2]) - 1, Number(match[3]), hours, minutes, 0, 0);
+}
+
+export function nextHourStart(from = new Date()): Date {
+  const start = new Date(from);
+  start.setMinutes(0, 0, 0);
+  start.setHours(start.getHours() + 1);
+  return start;
+}
+
+/** If start is at or after end, end becomes start + 1 hour. */
+export function ensureEndsAfterStart(start: Date, end: Date, minDurationMs = 3600000): Date {
+  if (end.getTime() > start.getTime()) return end;
+  return new Date(start.getTime() + minDurationMs);
+}
