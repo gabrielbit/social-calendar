@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { addDays, addMonths, eachDayOfInterval, isSameMonth } from "date-fns";
 import {
@@ -86,6 +86,11 @@ export function HomeCalendar({ events, personal, birthdays, googleConnected }: H
     personal: true,
     fechas: true,
   });
+
+  useEffect(() => {
+    const id = new URLSearchParams(window.location.search).get("e");
+    if (id) setOpenOccurrenceId(id);
+  }, []);
 
   const weekStart = useMemo(() => startOfWeekMonday(cursor), [cursor]);
   const monthStart = useMemo(() => startOfMonthZoned(cursor), [cursor]);

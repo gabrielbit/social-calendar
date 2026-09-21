@@ -168,30 +168,31 @@ cross join (values
 join public.agendas ag on ag.owner_id = v.author_id and ag.is_primary
 on conflict (id) do nothing;
 
--- Portadas de ejemplo (Unsplash) para ver filas y detalle con imagen.
+-- Portadas de ejemplo (Unsplash). Yoga/danza en recorte vertical (poster);
+-- teatro/música en apaisado, para los dos layouts del detalle.
 update public.events e
 set cover_image_url = v.url
 from (values
-  ('e0000000-0000-4000-8000-000000000001'::uuid, 'https://images.unsplash.com/photo-1544367567-0f2fcb009e0b?auto=format&fit=crop&w=1200&h=900&q=80'),
-  ('e0000000-0000-4000-8000-000000000002'::uuid, 'https://images.unsplash.com/photo-1552196563-55cd4e45efb3?auto=format&fit=crop&w=1200&h=900&q=80'),
-  ('e0000000-0000-4000-8000-000000000003'::uuid, 'https://images.unsplash.com/photo-1593810451137-5dc55105dace?auto=format&fit=crop&w=1200&h=900&q=80'),
-  ('e0000000-0000-4000-8000-000000000004'::uuid, 'https://images.unsplash.com/photo-1575052814086-f385e2e2ad1b?auto=format&fit=crop&w=1200&h=900&q=80'),
-  ('e0000000-0000-4000-8000-000000000005'::uuid, 'https://images.unsplash.com/photo-1506126613408-eca07ce68773?auto=format&fit=crop&w=1200&h=900&q=80'),
-  ('e0000000-0000-4000-8000-000000000006'::uuid, 'https://images.unsplash.com/photo-1545389336-cf090694435e?auto=format&fit=crop&w=1200&h=900&q=80'),
-  ('e0000000-0000-4000-8000-000000000007'::uuid, 'https://images.unsplash.com/photo-1518611012118-696072aa579a?auto=format&fit=crop&w=1200&h=900&q=80'),
-  ('e0000000-0000-4000-8000-000000000008'::uuid, 'https://images.unsplash.com/photo-1518834107812-67b0b7c58434?auto=format&fit=crop&w=1200&h=900&q=80'),
-  ('e0000000-0000-4000-8000-000000000009'::uuid, 'https://images.unsplash.com/photo-1508700929628-666bc8bd84ea?auto=format&fit=crop&w=1200&h=900&q=80'),
-  ('e0000000-0000-4000-8000-00000000000a'::uuid, 'https://images.unsplash.com/photo-1504609813442-a8924e83f76e?auto=format&fit=crop&w=1200&h=900&q=80'),
-  ('e0000000-0000-4000-8000-00000000000b'::uuid, 'https://images.unsplash.com/photo-1535525153412-5a76f2d1c3c8?auto=format&fit=crop&w=1200&h=900&q=80'),
-  ('e0000000-0000-4000-8000-00000000000c'::uuid, 'https://images.unsplash.com/photo-1519671482749-fd09be7ccebf?auto=format&fit=crop&w=1200&h=900&q=80'),
-  ('e0000000-0000-4000-8000-00000000000d'::uuid, 'https://images.unsplash.com/photo-1547153760-18fc86324498?auto=format&fit=crop&w=1200&h=900&q=80'),
-  ('e0000000-0000-4000-8000-00000000000e'::uuid, 'https://images.unsplash.com/photo-1510915361894-db8b60106cb1?auto=format&fit=crop&w=1200&h=900&q=80'),
-  ('e0000000-0000-4000-8000-00000000000f'::uuid, 'https://images.unsplash.com/photo-1503095396549-807759245b35?auto=format&fit=crop&w=1200&h=900&q=80'),
-  ('e0000000-0000-4000-8000-000000000010'::uuid, 'https://images.unsplash.com/photo-1429962714451-bb934ecdc4ec?auto=format&fit=crop&w=1200&h=900&q=80'),
-  ('e0000000-0000-4000-8000-000000000011'::uuid, 'https://images.unsplash.com/photo-1470225620780-dba8ba36b745?auto=format&fit=crop&w=1200&h=900&q=80'),
-  ('e0000000-0000-4000-8000-000000000012'::uuid, 'https://images.unsplash.com/photo-1485846234645-a62644f84728?auto=format&fit=crop&w=1200&h=900&q=80'),
-  ('e0000000-0000-4000-8000-000000000013'::uuid, 'https://images.unsplash.com/photo-1533174072545-7a4b6ad7a6c3?auto=format&fit=crop&w=1200&h=900&q=80'),
-  ('e0000000-0000-4000-8000-000000000014'::uuid, 'https://images.unsplash.com/photo-1492684223066-81342ee5ff30?auto=format&fit=crop&w=1200&h=900&q=80')
+  ('e0000000-0000-4000-8000-000000000001'::uuid, 'https://images.unsplash.com/photo-1544367567-0f2fcb009e0b?auto=format&fit=crop&w=800&h=1200&q=80'),
+  ('e0000000-0000-4000-8000-000000000002'::uuid, 'https://images.unsplash.com/photo-1552196563-55cd4e45efb3?auto=format&fit=crop&w=800&h=1200&q=80'),
+  ('e0000000-0000-4000-8000-000000000003'::uuid, 'https://images.unsplash.com/photo-1593810451137-5dc55105dace?auto=format&fit=crop&w=800&h=1200&q=80'),
+  ('e0000000-0000-4000-8000-000000000004'::uuid, 'https://images.unsplash.com/photo-1575052814086-f385e2e2ad1b?auto=format&fit=crop&w=800&h=1200&q=80'),
+  ('e0000000-0000-4000-8000-000000000005'::uuid, 'https://images.unsplash.com/photo-1506126613408-eca07ce68773?auto=format&fit=crop&w=800&h=1200&q=80'),
+  ('e0000000-0000-4000-8000-000000000006'::uuid, 'https://images.unsplash.com/photo-1545389336-cf090694435e?auto=format&fit=crop&w=800&h=1200&q=80'),
+  ('e0000000-0000-4000-8000-000000000007'::uuid, 'https://images.unsplash.com/photo-1518611012118-696072aa579a?auto=format&fit=crop&w=800&h=1200&q=80'),
+  ('e0000000-0000-4000-8000-000000000008'::uuid, 'https://images.unsplash.com/photo-1518834107812-67b0b7c58434?auto=format&fit=crop&w=800&h=1200&q=80'),
+  ('e0000000-0000-4000-8000-000000000009'::uuid, 'https://images.unsplash.com/photo-1508700929628-666bc8bd84ea?auto=format&fit=crop&w=800&h=1200&q=80'),
+  ('e0000000-0000-4000-8000-00000000000a'::uuid, 'https://images.unsplash.com/photo-1504609813442-a8924e83f76e?auto=format&fit=crop&w=1600&h=900&q=80'),
+  ('e0000000-0000-4000-8000-00000000000b'::uuid, 'https://images.unsplash.com/photo-1535525153412-5a76f2d1c3c8?auto=format&fit=crop&w=800&h=1200&q=80'),
+  ('e0000000-0000-4000-8000-00000000000c'::uuid, 'https://images.unsplash.com/photo-1519671482749-fd09be7ccebf?auto=format&fit=crop&w=1600&h=900&q=80'),
+  ('e0000000-0000-4000-8000-00000000000d'::uuid, 'https://images.unsplash.com/photo-1547153760-18fc86324498?auto=format&fit=crop&w=800&h=1200&q=80'),
+  ('e0000000-0000-4000-8000-00000000000e'::uuid, 'https://images.unsplash.com/photo-1510915361894-db8b60106cb1?auto=format&fit=crop&w=1600&h=900&q=80'),
+  ('e0000000-0000-4000-8000-00000000000f'::uuid, 'https://images.unsplash.com/photo-1503095396549-807759245b35?auto=format&fit=crop&w=1600&h=900&q=80'),
+  ('e0000000-0000-4000-8000-000000000010'::uuid, 'https://images.unsplash.com/photo-1429962714451-bb934ecdc4ec?auto=format&fit=crop&w=1600&h=900&q=80'),
+  ('e0000000-0000-4000-8000-000000000011'::uuid, 'https://images.unsplash.com/photo-1470225620780-dba8ba36b745?auto=format&fit=crop&w=1600&h=900&q=80'),
+  ('e0000000-0000-4000-8000-000000000012'::uuid, 'https://images.unsplash.com/photo-1485846234645-a62644f84728?auto=format&fit=crop&w=1600&h=900&q=80'),
+  ('e0000000-0000-4000-8000-000000000013'::uuid, 'https://images.unsplash.com/photo-1533174072545-7a4b6ad7a6c3?auto=format&fit=crop&w=1600&h=900&q=80'),
+  ('e0000000-0000-4000-8000-000000000014'::uuid, 'https://images.unsplash.com/photo-1492684223066-81342ee5ff30?auto=format&fit=crop&w=1600&h=900&q=80')
 ) as v(id, url)
 where e.id = v.id;
 

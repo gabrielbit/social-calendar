@@ -138,22 +138,25 @@
   background: rgb(12 10 22 / 0.8);
 }
 
-.event-detail-dialog {
+dialog.event-detail-dialog {
+  position: fixed;
   inset: 0;
-  width: 100%;
+  width: auto;
   max-width: none;
-  height: 100%;
+  height: auto;
   max-height: none;
   margin: 0;
-  padding: max(1rem, env(safe-area-inset-top)) 1rem max(1rem, env(safe-area-inset-bottom));
+  padding: max(1.5rem, env(safe-area-inset-top)) 1.5rem max(1.5rem, env(safe-area-inset-bottom));
   border: 0;
   background: transparent;
   color: inherit;
+  overflow: auto;
 }
 
-.event-detail-dialog[open] {
-  display: grid;
-  place-items: center;
+dialog.event-detail-dialog[open] {
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .event-detail-dialog::backdrop {

@@ -15,6 +15,11 @@ function cacheRatio(src: string, width: number, height: number): number {
   return value;
 }
 
+function probeSrc(src: string): string {
+  if (src.startsWith("/") || src.startsWith("data:") || src.startsWith("blob:")) return src;
+  return `/_next/image?url=${encodeURIComponent(src)}&w=64&q=1`;
+}
+
 function useFlyerRatio(src: string | undefined): number | null {
   const [ratio, setRatio] = useState<number | null>(() =>
     src ? (ratioCache.get(src) ?? null) : null,
@@ -32,12 +37,21 @@ function useFlyerRatio(src: string | undefined): number | null {
     }
 
     let active = true;
-    const img = new window.Image();
-    img.onload = () => {
-      if (!active || !img.naturalWidth) return;
-      setRatio(cacheRatio(src, img.naturalWidth, img.naturalHeight));
+    const apply = (width: number, height: number) => {
+      if (!active || !width) return;
+      setRatio(cacheRatio(src, width, height));
     };
-    img.src = src;
+
+    const img = new window.Image();
+    img.onload = () => apply(img.naturalWidth, img.naturalHeight);
+    img.onerror = () => {
+      if (!active) return;
+      const original = new window.Image();
+      original.onload = () => apply(original.naturalWidth, original.naturalHeight);
+      original.src = src;
+    };
+    img.src = probeSrc(src);
+
     return () => {
       active = false;
     };
@@ -70,15 +84,13 @@ type EventFlyerProps = {
 export function EventFlyer({ images, title, children }: EventFlyerProps) {
   const [index, setIndex] = useState(0);
   const [zoomed, setZoomed] = useState(false);
-  const cover = images[0];
-  const probed = useFlyerRatio(cover);
-  const [loadedRatio, setLoadedRatio] = useState<number | null>(null);
-  const ratio = probed ?? loadedRatio;
+  const current = images[Math.min(index, Math.max(images.length - 1, 0))];
+  const ratio = useFlyerRatio(current);
 
   const hasImages = images.length > 0;
   const multiple = images.length > 1;
+  const measuring = hasImages && ratio === null;
   const vertical = ratio !== null && ratio > VERTICAL_RATIO;
-  const current = images[Math.min(index, images.length - 1)];
 
   const next = useCallback(() => setIndex((i) => (i + 1) % images.length), [images.length]);
   const prev = useCallback(
@@ -104,12 +116,23 @@ export function EventFlyer({ images, title, children }: EventFlyerProps) {
 
   const counter = `${Math.min(index, images.length - 1) + 1} / ${images.length}`;
 
+  if (measuring) {
+    return (
+      <article
+        className="mx-auto h-[min(70dvh,420px)] w-[min(520px,100%)] rounded-[14px] bg-surface shadow-ds-md"
+        aria-busy="true"
+      >
+        <span className="sr-only">Cargando flyer</span>
+      </article>
+    );
+  }
+
   const media = (
     <div
       className={cn(
         "relative shrink-0 overflow-hidden bg-surface",
         vertical
-          ? "h-[240px] w-full md:h-auto md:min-h-[420px] md:w-[320px] md:self-stretch"
+          ? "h-[280px] w-full min-[540px]:h-auto min-[540px]:min-h-[420px] min-[540px]:w-[320px] min-[540px]:self-stretch"
           : "h-[210px] w-full",
       )}
       style={hasImages ? undefined : { backgroundImage: textureFor(title) }}
@@ -121,13 +144,7 @@ export function EventFlyer({ images, title, children }: EventFlyerProps) {
           fill
           priority
           className="object-cover object-[center_22%]"
-          sizes={vertical ? "(max-width: 768px) 100vw, 320px" : "(max-width: 768px) 100vw, 520px"}
-          onLoad={(event) => {
-            if (current !== cover) return;
-            const img = event.currentTarget;
-            if (!img.naturalWidth) return;
-            setLoadedRatio(cacheRatio(cover, img.naturalWidth, img.naturalHeight));
-          }}
+          sizes={vertical ? "(max-width: 540px) 100vw, 320px" : "(max-width: 540px) 100vw, 520px"}
         />
       ) : null}
 
@@ -157,9 +174,12 @@ export function EventFlyer({ images, title, children }: EventFlyerProps) {
   return (
     <>
       <article
+        data-flyer-layout={vertical ? "portrait" : "landscape"}
         className={cn(
-          "mx-auto flex max-h-[calc(100dvh-48px)] w-full overflow-hidden rounded-[14px] bg-surface shadow-ds-md",
-          vertical ? "max-w-[880px] flex-col md:flex-row" : "max-w-[520px] flex-col",
+          "mx-auto flex max-h-[calc(100dvh-48px)] overflow-hidden rounded-[14px] bg-surface shadow-ds-md",
+          vertical
+            ? "w-[min(880px,100%)] flex-col min-[540px]:flex-row"
+            : "w-[min(520px,100%)] flex-col",
         )}
       >
         {media}
