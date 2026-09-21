@@ -123,7 +123,7 @@ export async function getEventForEdit(eventId: string, userId: string) {
     .select(
       `
       id, title, description_html, visibility, starts_at, ends_at, all_day, rrule,
-      site_url, tickets_url, is_free, linked_birthday, cover_image_url, gallery_urls,
+      site_url, tickets_url, is_free, price_label, linked_birthday, cover_image_url, gallery_urls,
       allow_contact, contact_instagram, contact_whatsapp, contact_email, author_id,
       venue:venues ( name, address ),
       event_tags ( tag:tags ( slug ) )
@@ -162,6 +162,7 @@ export async function getEventForEdit(eventId: string, userId: string) {
     siteUrl: (data.site_url as string | null) ?? "",
     ticketsUrl: (data.tickets_url as string | null) ?? "",
     isFree: Boolean(data.is_free),
+    priceLabel: (data.price_label as string | null) ?? "",
     linkedBirthday: Boolean(data.linked_birthday),
     tags,
     images,

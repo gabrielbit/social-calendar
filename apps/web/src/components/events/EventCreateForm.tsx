@@ -28,6 +28,7 @@ export type EventFormInitial = {
   siteUrl: string;
   ticketsUrl: string;
   isFree: boolean;
+  priceLabel: string;
   linkedBirthday: boolean;
   tags: string;
   images: string[];
@@ -110,6 +111,7 @@ export function EventCreateForm({ defaultDate, defaultContact, initial }: EventC
     initial?.whatsapp ?? defaultContact?.whatsapp ?? "",
   );
   const [contactEmail, setContactEmail] = useState(initial?.email ?? defaultContact?.email ?? "");
+  const [isFree, setIsFree] = useState(Boolean(initial?.isFree));
   const isEdit = Boolean(initial);
 
   async function onSubmit(e: React.FormEvent<HTMLFormElement>) {
@@ -137,8 +139,8 @@ export function EventCreateForm({ defaultDate, defaultContact, initial }: EventC
       locationLabel: locationLabel.trim() || null,
       siteUrl: String(fd.get("siteUrl") ?? "") || null,
       ticketsUrl: String(fd.get("ticketsUrl") ?? "") || null,
-      isFree: fd.get("isFree") === "on",
-      priceLabel: String(fd.get("priceLabel") ?? "") || null,
+      isFree,
+      priceLabel: isFree ? null : String(fd.get("priceLabel") ?? "").trim() || null,
       coverImageUrl: images[0] ?? null,
       tagSlugs: tagsRaw
         .split(",")
@@ -370,26 +372,41 @@ export function EventCreateForm({ defaultDate, defaultContact, initial }: EventC
         </div>
       </div>
 
-      <div className="flex flex-wrap gap-4 text-sm">
-        <label className="flex items-center gap-2">
+      <div className="grid gap-4 sm:grid-cols-2">
+        <div>
+          <label htmlFor="priceLabel" className="mb-1.5 block text-sm text-ink-muted">
+            Precio
+          </label>
+          <input
+            id="priceLabel"
+            name="priceLabel"
+            className="input-field"
+            placeholder="$7.000 la clase"
+            defaultValue={initial?.priceLabel}
+            disabled={isFree}
+            autoComplete="off"
+          />
+        </div>
+        <label className="flex items-center gap-2 text-sm sm:mt-8">
           <input
             type="checkbox"
-            name="isFree"
             className="rounded border-border"
-            defaultChecked={initial?.isFree}
+            checked={isFree}
+            onChange={(event) => setIsFree(event.target.checked)}
           />
           Gratis
         </label>
-        <label className="flex items-center gap-2">
-          <input
-            type="checkbox"
-            name="linkedBirthday"
-            className="rounded border-border"
-            defaultChecked={initial?.linkedBirthday}
-          />
-          Fiesta de cumpleaños (este año)
-        </label>
       </div>
+
+      <label className="flex items-center gap-2 text-sm">
+        <input
+          type="checkbox"
+          name="linkedBirthday"
+          className="rounded border-border"
+          defaultChecked={initial?.linkedBirthday}
+        />
+        Fiesta de cumpleaños (este año)
+      </label>
 
       <fieldset className="space-y-3 rounded-2xl border border-border p-4">
         <legend className="px-1 text-sm text-ink-muted">Contacto de este evento</legend>
@@ -442,7 +459,6 @@ export function EventCreateForm({ defaultDate, defaultContact, initial }: EventC
       </fieldset>
 
       <input type="hidden" name="locationMode" value="physical" />
-      <input type="hidden" name="priceLabel" value="" />
 
       {error ? (
         <p className="rounded-xl bg-red-500/10 px-3 py-2 text-sm text-red-400" role="alert">
