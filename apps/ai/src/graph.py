@@ -9,6 +9,7 @@ from pydantic import BaseModel, Field
 from .providers import Provider, ProviderUnavailableError, get_chat_model
 from .skills import get_skill, list_skills
 from .skills import create_event as _create_event  # noqa: F401 — register skill
+from .skills import web_lookup as _web_lookup  # noqa: F401 — register skill
 
 
 class AgentState(TypedDict, total=False):
@@ -31,7 +32,7 @@ ROUTER_PROMPT = """
   <rules>
     <rule>Respondé solo con un skill_id de la lista, o "chat" si ninguna aplica.</rule>
     <rule>Si el usuario pega un flyer, texto de evento, o pide crear/agendar algo, usá create_event.</rule>
-    <rule>Búsqueda de eventos aún no está disponible: usá chat y decí que va a llegar.</rule>
+    <rule>Si pide buscar en internet, verificar un dato, o preguntar por un venue/link público, usá web_lookup.</rule>
   </rules>
 </agent>
 """.strip()
@@ -47,11 +48,14 @@ async def route_node(state: AgentState) -> AgentState:
     text = (state.get("text") or "").strip()
     image_urls = state.get("image_urls") or []
 
-    # Heurística barata: imágenes o palabras de alta → create_event sin gastar un turn de router.
     lowered = text.lower()
     create_hints = ("crear", "creá", "crea", "alta", "agend", "evento", "flyer", "peg")
+    search_hints = ("busc", "google", "internet", "averigu", "dónde queda", "donde queda", "link de")
+
     if image_urls or any(hint in lowered for hint in create_hints) or len(text) > 80:
         return {**state, "skill_id": "create_event"}
+    if any(hint in lowered for hint in search_hints) and get_skill("web_lookup"):
+        return {**state, "skill_id": "web_lookup"}
 
     model = get_chat_model(provider)
     structured = model.with_structured_output(RouteDecision)
@@ -76,11 +80,25 @@ async def route_node(state: AgentState) -> AgentState:
 async def run_skill_node(state: AgentState) -> AgentState:
     skill_id = state.get("skill_id") or "chat"
     if skill_id == "chat":
+        lookup = get_skill("web_lookup")
+        if lookup and (state.get("text") or "").strip():
+            result = await lookup.run(
+                text=state.get("text") or "",
+                image_urls=state.get("image_urls") or [],
+                provider=state.get("provider") or "openai",
+                history=state.get("history") or [],
+            )
+            return {
+                **state,
+                "message": result.get("message") or "",
+                "draft": None,
+                "skill_id": "web_lookup",
+            }
         return {
             **state,
             "message": (
-                "Por ahora puedo ayudarte a crear eventos pegando texto o imágenes. "
-                "La búsqueda con filtros llega después."
+                "Puedo crear eventos pegando texto o imágenes, y buscar datos públicos en internet. "
+                "Decime qué necesitás."
             ),
             "draft": None,
         }
@@ -151,6 +169,22 @@ async def run_agent_turn(
                 f"El proveedor {exc.provider} no está configurado en el servidor. "
                 "Elegí otro modelo en Ajustes o pedí que carguen la API key."
             ),
+            "draft": None,
+        }
+    except Exception as exc:  # noqa: BLE001 — surface a usable message to the panel
+        detail = str(exc)
+        if "invalid_image_url" in detail or "downloading file" in detail.lower():
+            return {
+                "skillId": "create_event",
+                "message": (
+                    "No pude leer la imagen del flyer. Probá pegar el texto del flyer "
+                    "o subir la imagen de nuevo."
+                ),
+                "draft": None,
+            }
+        return {
+            "skillId": "chat",
+            "message": f"Falló el asistente: {detail[:280]}",
             "draft": None,
         }
 

@@ -2,14 +2,16 @@ from __future__ import annotations
 
 import json
 import re
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timedelta
 from typing import Any
 from zoneinfo import ZoneInfo
 
-from langchain_core.messages import HumanMessage, SystemMessage
+from langchain_core.messages import AIMessage, HumanMessage, SystemMessage, ToolMessage
 from pydantic import BaseModel, Field
 
 from ..providers import Provider, get_chat_model, supports_images
+from ..media import resolve_image_urls
+from ..tools import web_search_tools
 from . import Skill, register_skill
 
 DEFAULT_TIMEZONE = "America/Argentina/Buenos_Aires"
@@ -42,6 +44,7 @@ CREATE_EVENT_PROMPT = """
   <rules>
     <rule>Timezone por defecto: America/Argentina/Buenos_Aires. Fechas en ISO-8601 con offset.</rule>
     <rule>No inventes precio, URLs, lugar ni horario. Si no está en el input, dejalo null.</rule>
+    <rule>Si falta un dato público verificable (dirección, link de entradas) y el usuario lo pide o el flyer lo sugiere, usá web_search antes de armar el borrador.</rule>
     <rule>Si falta título o startsAt, pedilos en message y no completes el borrador como listo.</rule>
     <rule>Si hay startsAt y no endsAt, proponé startsAt + 2 horas.</rule>
     <rule>descriptionHtml puede ser HTML simple (p, br, strong). Si solo hay texto plano, envolvél o en &lt;p&gt;.</rule>
@@ -117,22 +120,69 @@ def _normalize_draft(
     }
 
 
-def _build_user_content(text: str, image_urls: list[str], provider: Provider) -> list[dict[str, Any]] | str:
+def _build_user_content(
+    text: str,
+    image_urls: list[str],
+    model_image_urls: list[str],
+    provider: Provider,
+) -> list[dict[str, Any]] | str:
     now_local = datetime.now(TZ).isoformat()
     base = (
         f"Ahora local ({DEFAULT_TIMEZONE}): {now_local}\n"
         f"Texto del usuario:\n{text or '(sin texto)'}\n"
         f"Imágenes adjuntas ({len(image_urls)}): {', '.join(image_urls) if image_urls else 'ninguna'}\n"
-        "Respondé SOLO un JSON con las claves del borrador más `message`."
+        "Cuando termines de investigar (si hace falta), respondé el borrador."
     )
 
-    if not image_urls or not supports_images(provider):
+    if not model_image_urls or not supports_images(provider):
         return base
 
     parts: list[dict[str, Any]] = [{"type": "text", "text": base}]
-    for url in image_urls[:6]:
+    for url in model_image_urls:
         parts.append({"type": "image_url", "image_url": {"url": url}})
     return parts
+
+
+async def _gather_context(
+    *,
+    text: str,
+    image_urls: list[str],
+    provider: Provider,
+    history: list[dict[str, Any]] | None,
+) -> list[Any]:
+    tools = web_search_tools()
+    model = get_chat_model(provider)
+    bound = model.bind_tools(tools) if tools else model
+    model_image_urls = await resolve_image_urls(image_urls) if supports_images(provider) else []
+    user_content = _build_user_content(text, image_urls, model_image_urls, provider)
+
+    messages: list[Any] = [SystemMessage(content=CREATE_EVENT_PROMPT)]
+    for item in (history or [])[-8:]:
+        role = item.get("role")
+        content = item.get("content")
+        if role == "user" and isinstance(content, str):
+            messages.append(HumanMessage(content=content))
+        elif role == "assistant" and isinstance(content, str):
+            messages.append(AIMessage(content=content))
+    messages.append(HumanMessage(content=user_content))
+
+    if not tools:
+        return messages
+
+    tool_by_name = {t.name: t for t in tools}
+    for _ in range(3):
+        response = await bound.ainvoke(messages)
+        messages.append(response)
+        if not isinstance(response, AIMessage) or not response.tool_calls:
+            break
+        for call in response.tool_calls:
+            name = call.get("name") if isinstance(call, dict) else getattr(call, "name", None)
+            args = call.get("args") if isinstance(call, dict) else getattr(call, "args", {})
+            call_id = call.get("id") if isinstance(call, dict) else getattr(call, "id", "")
+            tool = tool_by_name.get(str(name))
+            result = await tool.ainvoke(args or {}) if tool else f"Tool {name} no disponible"
+            messages.append(ToolMessage(content=str(result), tool_call_id=str(call_id)))
+    return messages
 
 
 async def run_create_event(
@@ -152,30 +202,28 @@ async def run_create_event(
             "draft": None,
         }
 
+    context_messages = await _gather_context(
+        text=text,
+        image_urls=image_urls,
+        provider=provider,
+        history=history,
+    )
+    context_messages.append(
+        HumanMessage(
+            content=(
+                "Con todo lo anterior, respondé SOLO un JSON con las claves del borrador "
+                "más `message` (sin markdown)."
+            )
+        )
+    )
+
     model = get_chat_model(provider)
-    structured = model.with_structured_output(EventDraftModel)
-
-    messages: list[Any] = [SystemMessage(content=CREATE_EVENT_PROMPT)]
-    for item in (history or [])[-8:]:
-        role = item.get("role")
-        content = item.get("content")
-        if role == "user" and isinstance(content, str):
-            messages.append(HumanMessage(content=content))
-        elif role == "assistant" and isinstance(content, str):
-            messages.append(SystemMessage(content=f"Asistente previo: {content}"))
-
-    messages.append(HumanMessage(content=_build_user_content(text, image_urls, provider)))
-
     try:
-        result = await structured.ainvoke(messages)
-        if isinstance(result, EventDraftModel):
-            data = result
-        else:
-            data = EventDraftModel.model_validate(result)
+        structured = model.with_structured_output(EventDraftModel)
+        result = await structured.ainvoke(context_messages)
+        data = result if isinstance(result, EventDraftModel) else EventDraftModel.model_validate(result)
     except Exception:
-        # Fallback: plain JSON completion for providers that struggle with structured output.
-        raw_model = get_chat_model(provider)
-        raw = await raw_model.ainvoke(messages)
+        raw = await model.ainvoke(context_messages)
         content = raw.content if isinstance(raw.content, str) else str(raw.content)
         data = EventDraftModel.model_validate(_parse_json_content(content))
 

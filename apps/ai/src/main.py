@@ -5,7 +5,7 @@ from typing import Any, Literal
 from fastapi import Depends, FastAPI, Header, HTTPException
 from pydantic import BaseModel, Field
 
-from .config import get_settings, provider_available
+from .config import get_settings, provider_available, tavily_available
 from .graph import run_agent_turn
 
 app = FastAPI(title="Agenda AI", version="0.1.0")
@@ -40,6 +40,9 @@ def health() -> dict[str, Any]:
             "openai": provider_available("openai"),
             "anthropic": provider_available("anthropic"),
             "deepseek": provider_available("deepseek"),
+        },
+        "tools": {
+            "tavily": tavily_available(),
         },
     }
 

@@ -4,18 +4,33 @@ from functools import lru_cache
 from pathlib import Path
 from typing import Literal
 
-from dotenv import load_dotenv
+from dotenv import dotenv_values
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
-# Cargar .env de la raíz del monorepo y de apps/ai
-_HERE = Path(__file__).resolve().parent
-for candidate in (
-    _HERE.parents[2] / ".env",  # social-calendar/.env
-    _HERE.parents[1] / ".env",  # apps/ai/.env
-    Path.cwd() / ".env",
-):
-    if candidate.exists():
-        load_dotenv(candidate, override=False)
+
+def _load_env_files() -> None:
+    """Carga .env del monorepo. Valores vacíos no pisan claves ya seteadas con contenido."""
+    import os
+
+    here = Path(__file__).resolve().parent
+    candidates = (
+        here.parents[2] / ".env",  # social-calendar/.env
+        here.parents[2] / "apps" / "api" / ".env",
+        here.parents[1] / ".env",  # apps/ai/.env
+        Path.cwd() / ".env",
+    )
+    for path in candidates:
+        if not path.exists():
+            continue
+        for key, value in dotenv_values(path).items():
+            if key is None or value is None:
+                continue
+            current = os.environ.get(key)
+            if current is None or current.strip() == "":
+                os.environ[key] = value
+
+
+_load_env_files()
 
 
 class Settings(BaseSettings):
@@ -35,6 +50,8 @@ class Settings(BaseSettings):
     deepseek_model: str = "deepseek-chat"
     deepseek_base_url: str = "https://api.deepseek.com"
 
+    tavily_api_key: str | None = None
+
 
 @lru_cache
 def get_settings() -> Settings:
@@ -51,3 +68,7 @@ def provider_available(provider: Provider) -> bool:
     if provider == "anthropic":
         return bool(settings.anthropic_api_key)
     return bool(settings.deepseek_api_key)
+
+
+def tavily_available() -> bool:
+    return bool(get_settings().tavily_api_key)

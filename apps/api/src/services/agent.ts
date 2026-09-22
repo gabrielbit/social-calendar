@@ -145,21 +145,29 @@ async function callAiService(input: {
   imageUrls: string[];
   history: { role: string; content: string }[];
 }): Promise<{ skillId: string; message: string; draft: AgentEventDraft | null }> {
-  const response = await fetch(`${env.AI_SERVICE_URL}/v1/turns`, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${env.AI_INTERNAL_TOKEN}`,
-      Accept: "application/json",
-    },
-    body: JSON.stringify({
-      userId: input.userId,
-      provider: input.provider,
-      text: input.text,
-      imageUrls: input.imageUrls,
-      history: input.history,
-    }),
-  });
+  let response: Response;
+  try {
+    response = await fetch(`${env.AI_SERVICE_URL}/v1/turns`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${env.AI_INTERNAL_TOKEN}`,
+        Accept: "application/json",
+      },
+      body: JSON.stringify({
+        userId: input.userId,
+        provider: input.provider,
+        text: input.text,
+        imageUrls: input.imageUrls,
+        history: input.history,
+      }),
+    });
+  } catch {
+    throw httpError(
+      "No se pudo conectar al servicio de AI. ¿Está corriendo en el puerto 8000?",
+      502,
+    );
+  }
 
   const text = await response.text();
   let parsed: unknown = null;
@@ -176,7 +184,13 @@ async function callAiService(input: {
       typeof parsed === "object" && parsed && "detail" in parsed
         ? String((parsed as { detail: unknown }).detail)
         : `AI service error (${response.status})`;
-    throw httpError(detail, response.status === 401 ? 502 : response.status >= 500 ? 502 : 400);
+    const status =
+      response.status === 401 || response.status >= 500
+        ? 502
+        : response.status >= 400
+          ? response.status
+          : 400;
+    throw httpError(detail || "El servicio de AI no respondió", status);
   }
 
   const body = z

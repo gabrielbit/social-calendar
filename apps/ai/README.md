@@ -2,11 +2,13 @@
 
 ## Qué hace hoy
 Asistente por licencia: convierte texto e imágenes pegadas en un borrador de evento.
-El router elige skills registradas; hoy solo existe `create_event`.
+Puede buscar en internet con Tavily (`web_search`) al crear eventos o responder consultas.
+El router elige skills registradas: `create_event`, `web_lookup`.
 
 ## Stack
 - FastAPI + LangGraph
 - Proveedores: OpenAI, Anthropic, DeepSeek (vía API compatible OpenAI)
+- Tools: Tavily Search
 
 ## Arranque local
 ```bash
@@ -17,7 +19,8 @@ pip install -r requirements.txt
 uvicorn src.main:app --reload --port 8000
 ```
 
-Requiere `AI_INTERNAL_TOKEN` y al menos una API key de proveedor en el `.env` raíz.
+Requiere `AI_INTERNAL_TOKEN` y al menos una API key de proveedor en el `.env` raíz o `apps/api/.env`.
+Para búsqueda web: `TAVILY_API_KEY`.
 
 ## Contrato
 `POST /v1/turns` con header `Authorization: Bearer $AI_INTERNAL_TOKEN`.
