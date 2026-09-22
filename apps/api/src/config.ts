@@ -44,6 +44,8 @@ const EnvSchema = z.object({
   GOOGLE_MAPS_HTTP_REFERER: z.string().url().optional(),
   APP_URL: z.string().url(),
   CORS_ORIGIN: z.string().min(1),
+  AI_SERVICE_URL: z.string().url().default("http://localhost:8000"),
+  AI_INTERNAL_TOKEN: z.string().min(8).default("dev-ai-token"),
 });
 
 export type Env = z.infer<typeof EnvSchema>;

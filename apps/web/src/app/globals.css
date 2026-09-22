@@ -395,3 +395,13 @@ dialog.event-detail-dialog[open] {
     -webkit-line-clamp: 1;
   }
 }
+
+/* TipTap placeholder */
+.tiptap p.is-editor-empty:first-child::before,
+.ProseMirror p.is-editor-empty:first-child::before {
+  color: theme("colors.ink.faint");
+  content: attr(data-placeholder);
+  float: left;
+  height: 0;
+  pointer-events: none;
+}

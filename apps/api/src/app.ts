@@ -4,6 +4,7 @@ import Fastify, { type FastifyServerOptions } from "fastify";
 import { corsOrigins, env } from "./config.js";
 import authPlugin from "./plugins/auth.js";
 import activityRoutes from "./routes/activity.js";
+import agentRoutes from "./routes/agent.js";
 import calendarRoutes from "./routes/calendar.js";
 import communityRoutes from "./routes/community.js";
 import eventsRoutes from "./routes/events.js";
@@ -55,6 +56,7 @@ export async function buildApp(opts: FastifyServerOptions = {}) {
       await api.register(placesRoutes);
       await api.register(moderationRoutes);
       await api.register(activityRoutes);
+      await api.register(agentRoutes);
     },
     { prefix: "/api" },
   );

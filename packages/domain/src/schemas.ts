@@ -122,6 +122,29 @@ export const RsvpInputSchema = z.object({
 });
 export type RsvpInput = z.infer<typeof RsvpInputSchema>;
 
+export const AgentProviderSchema = z.enum(["openai", "anthropic", "deepseek"]);
+export type AgentProvider = z.infer<typeof AgentProviderSchema>;
+
+export const AgentEventDraftSchema = z.object({
+  title: z.string().min(1).max(200),
+  descriptionHtml: z.string().max(50_000).nullish(),
+  startsAt: z.string().datetime({ offset: true }),
+  endsAt: z.string().datetime({ offset: true }),
+  allDay: z.boolean().default(false),
+  timezone: z.string().default(DEFAULT_TIMEZONE),
+  locationMode: LocationModeSchema.default("physical"),
+  locationLabel: z.string().max(300).nullish(),
+  onlineUrl: z.string().url().nullish(),
+  siteUrl: z.string().url().nullish(),
+  ticketsUrl: z.string().url().nullish(),
+  isFree: z.boolean().default(false),
+  priceLabel: z.string().max(120).nullish(),
+  coverImageUrl: z.string().url().nullish(),
+  galleryUrls: z.array(z.string().url()).max(12).default([]),
+  tagSlugs: z.array(SlugSchema).max(20).default([]),
+});
+export type AgentEventDraft = z.infer<typeof AgentEventDraftSchema>;
+
 export const AgendaSourceSchema = z.object({
   sourceProfileId: z.string().uuid().optional(),
   tagSlugs: z.array(SlugSchema).default([]),

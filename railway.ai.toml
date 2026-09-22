@@ -1,0 +1,11 @@
+# AI service — Railway config-as-code (opcional)
+# Root Directory vacío, Dockerfile path: Dockerfile.ai
+
+[build]
+builder = "DOCKERFILE"
+dockerfilePath = "Dockerfile.ai"
+
+[deploy]
+healthcheckPath = "/health"
+healthcheckTimeout = 30
+restartPolicyType = "ON_FAILURE"

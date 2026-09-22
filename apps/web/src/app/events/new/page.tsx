@@ -2,6 +2,8 @@ import { redirect } from "next/navigation";
 import { EventCreateForm } from "@/components/events/EventCreateForm";
 import { Container } from "@/components/layout/Container";
 import { PageHeader } from "@/components/layout/PageHeader";
+import { ReturnLink } from "@/components/layout/ReturnLink";
+import { safeReturnPath } from "@/lib/return-to";
 import { createClient } from "@/lib/supabase/server";
 
 export const metadata = {
@@ -9,7 +11,7 @@ export const metadata = {
 };
 
 type Props = {
-  searchParams: Promise<{ date?: string }>;
+  searchParams: Promise<{ date?: string; from?: string }>;
 };
 
 export default async function NewEventPage({ searchParams }: Props) {
@@ -19,7 +21,8 @@ export default async function NewEventPage({ searchParams }: Props) {
   } = await supabase.auth.getUser();
   if (!user) redirect("/auth/login?next=/events/new");
 
-  const { date } = await searchParams;
+  const { date, from } = await searchParams;
+  const returnTo = safeReturnPath(from);
   const { data: profile } = await supabase
     .from("profiles")
     .select("instagram_handle, whatsapp_phone, contact_email, allow_contact")
@@ -28,11 +31,13 @@ export default async function NewEventPage({ searchParams }: Props) {
 
   return (
     <Container className="py-10 sm:py-14">
+      <ReturnLink explicit={returnTo} />
       <PageHeader
         title="Nuevo evento"
         description="Publicá en tu agenda. Pegá una imagen con ⌘V o elegila desde el disco."
       />
       <EventCreateForm
+        returnTo={returnTo}
         defaultDate={date}
         defaultContact={{
           allowContact: profile?.allow_contact ?? true,

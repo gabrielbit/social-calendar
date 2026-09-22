@@ -23,7 +23,7 @@ export default async function SettingsPage() {
 
   const { data: prefs } = await supabase
     .from("user_preferences")
-    .select("home_zone, notify_email, notify_birthdays")
+    .select("home_zone, notify_email, notify_birthdays, agent_provider")
     .eq("user_id", user.id)
     .maybeSingle();
 
@@ -32,6 +32,12 @@ export default async function SettingsPage() {
     .select("status")
     .eq("user_id", user.id)
     .eq("provider", "google")
+    .maybeSingle();
+
+  const { data: entitlement } = await supabase
+    .from("agent_entitlements")
+    .select("enabled")
+    .eq("user_id", user.id)
     .maybeSingle();
 
   return (
@@ -43,6 +49,7 @@ export default async function SettingsPage() {
           profile={profile ?? undefined}
           prefs={prefs ?? undefined}
           googleConnected={calendarConn?.status === "active"}
+          agentEnabled={Boolean(entitlement?.enabled)}
         />
 
         <section className="mt-8">

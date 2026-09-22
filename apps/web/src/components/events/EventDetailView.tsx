@@ -1,13 +1,16 @@
 "use client";
 
 import Link from "next/link";
+import { usePathname, useRouter } from "next/navigation";
 import { ExternalLink, Pencil, Ticket } from "lucide-react";
 import { buildGoogleMapsUrl, resolveContactDisplay } from "@agenda/domain";
 import { ContactLinks } from "@/components/contact/ContactLinks";
 import { EventActions } from "@/components/events/EventActions";
+import { useEventDetailNavigateAway } from "@/components/events/EventDetailDialog";
 import { EventFlyer } from "@/components/events/EventFlyer";
 import { InstagramSource } from "@/components/events/InstagramSource";
 import { formatEventClock, formatEventDate } from "@/lib/dates";
+import { rememberedSection, returnToLabel, safeReturnPath } from "@/lib/return-to";
 import type { OccurrenceDetail } from "@/lib/types";
 
 type EventDetailViewProps = {
@@ -16,6 +19,7 @@ type EventDetailViewProps = {
   curatedFrom?: { slug: string; display_name: string } | null;
   showCanonicalLink?: boolean;
   canEdit?: boolean;
+  returnTo?: string | null;
 };
 
 function dedupeLocationParts(parts: string[]): string[] {
@@ -51,9 +55,24 @@ export function EventDetailView({
   curatedFrom = null,
   showCanonicalLink = false,
   canEdit = false,
+  returnTo = null,
 }: EventDetailViewProps) {
   const { event } = occurrence;
   const author = event.author;
+  const pathname = usePathname();
+  const router = useRouter();
+  const navigateAway = useEventDetailNavigateAway();
+  const leaveTo = safeReturnPath(returnTo);
+
+  function openEditor() {
+    const origin =
+      pathname.startsWith("/e/") || pathname.startsWith("/events/")
+        ? rememberedSection()
+        : pathname || "/";
+    const href = `/events/${event.id}/edit?from=${encodeURIComponent(origin)}`;
+    if (navigateAway) navigateAway(href);
+    else router.push(href);
+  }
 
   const dateLabel = capitalize(
     formatEventDate(occurrence.starts_at, occurrence.timezone, occurrence.all_day),
@@ -124,10 +143,10 @@ export function EventDetailView({
           {event.title}
         </h1>
         {canEdit ? (
-          <Link href={`/events/${event.id}/edit`} className="btn-secondary shrink-0 text-[13px]">
+          <button type="button" className="btn-secondary shrink-0 text-[13px]" onClick={openEditor}>
             <Pencil className="size-3.5" aria-hidden />
             Editar evento
-          </Link>
+          </button>
         ) : null}
       </div>
 
@@ -193,7 +212,7 @@ export function EventDetailView({
 
       {event.description_html ? (
         <div
-          className="prose prose-invert max-w-none text-pretty text-sm leading-relaxed text-neutral-300 prose-a:text-accent-300"
+          className="prose prose-invert prose-sm max-w-none text-pretty leading-relaxed text-neutral-300 prose-headings:text-ink prose-a:text-accent-300 prose-strong:text-ink"
           dangerouslySetInnerHTML={{ __html: event.description_html }}
         />
       ) : null}
@@ -237,6 +256,8 @@ export function EventDetailView({
         description={event.description_html?.replace(/<[^>]+>/g, " ")}
         location={locationForCalendar}
         canonicalPath={showCanonicalLink ? `/e/${occurrence.id}` : undefined}
+        leaveHref={leaveTo}
+        leaveLabel={leaveTo ? returnToLabel(leaveTo) : undefined}
       />
 
       {agendaSlug ? (

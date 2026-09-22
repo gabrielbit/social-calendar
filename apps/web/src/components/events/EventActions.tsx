@@ -17,9 +17,10 @@ import {
   type CalendarEventPayload,
 } from "@agenda/domain";
 import { formatEventDate, formatEventTime, appUrl } from "@/lib/dates";
+import { useRouter } from "next/navigation";
 import { clientApiPut } from "@/lib/api-client";
 import { cn } from "@/lib/utils";
-import { useEventDetailClose } from "@/components/events/EventDetailDialog";
+import { useEventDetailClose, useEventDetailNavigateAway } from "@/components/events/EventDetailDialog";
 
 type EventActionsProps = {
   occurrenceId: string;
@@ -32,6 +33,8 @@ type EventActionsProps = {
   location?: string | null;
   canonicalPath?: string;
   showRsvp?: boolean;
+  leaveHref?: string | null;
+  leaveLabel?: string;
   className?: string;
 };
 
@@ -46,9 +49,13 @@ export function EventActions({
   location,
   canonicalPath,
   showRsvp = true,
+  leaveHref,
+  leaveLabel = "Volver",
   className,
 }: EventActionsProps) {
   const close = useEventDetailClose();
+  const navigateAway = useEventDetailNavigateAway();
+  const router = useRouter();
   const [rsvp, setRsvp] = useState<"going" | "not_going" | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [needsLogin, setNeedsLogin] = useState(false);
@@ -114,6 +121,18 @@ export function EventActions({
   return (
     <div className={cn("flex flex-col gap-3", className)}>
       <div className="flex flex-wrap gap-2">
+        {leaveHref ? (
+          <button
+            type="button"
+            onClick={() => {
+              if (navigateAway) navigateAway(leaveHref);
+              else router.replace(leaveHref);
+            }}
+            className="btn-secondary text-sm"
+          >
+            {leaveLabel}
+          </button>
+        ) : null}
         {close ? (
           <button type="button" onClick={close} className="btn-secondary text-sm">
             Cerrar

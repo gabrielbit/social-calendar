@@ -3,10 +3,19 @@
 import { createContext, useContext, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 
-const EventDetailCloseContext = createContext<(() => void) | null>(null);
+type EventDetailCloseApi = {
+  close: () => void;
+  navigateAway: (href: string) => void;
+};
+
+const EventDetailCloseContext = createContext<EventDetailCloseApi | null>(null);
 
 export function useEventDetailClose() {
-  return useContext(EventDetailCloseContext);
+  return useContext(EventDetailCloseContext)?.close ?? null;
+}
+
+export function useEventDetailNavigateAway() {
+  return useContext(EventDetailCloseContext)?.navigateAway ?? null;
 }
 
 type EventDetailDialogProps = {
@@ -21,6 +30,14 @@ export function EventDetailDialog({ children, onDismiss }: EventDetailDialogProp
 
   function close() {
     ref.current?.close();
+  }
+
+  function navigateAway(href: string) {
+    dismissed.current = true;
+    ref.current?.close();
+    onDismiss?.();
+    // replace: evita dejar /e/... en el historial con el slot @modal pegado
+    router.replace(href);
   }
 
   useEffect(() => {
@@ -48,7 +65,9 @@ export function EventDetailDialog({ children, onDismiss }: EventDetailDialogProp
         if (event.target === event.currentTarget) close();
       }}
     >
-      <EventDetailCloseContext.Provider value={close}>{children}</EventDetailCloseContext.Provider>
+      <EventDetailCloseContext.Provider value={{ close, navigateAway }}>
+        {children}
+      </EventDetailCloseContext.Provider>
     </dialog>
   );
 }
