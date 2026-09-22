@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { CreateEventSchema, DEFAULT_TIMEZONE, slugify } from "@agenda/domain";
 import { clientApiPatch, clientApiPost } from "@/lib/api-client";
 import { EventDateTimePicker } from "@/components/events/EventDateTimePicker";
@@ -9,6 +9,7 @@ import { EventMediaField } from "@/components/events/EventMediaField";
 import { RichTextEditor } from "@/components/events/RichTextEditor";
 import { LocationAutocomplete } from "@/components/settings/LocationAutocomplete";
 import { ensureEndsAfterStart, localDateAt, nextHourStart } from "@/lib/dates";
+import { rememberedSection, safeReturnPath } from "@/lib/return-to";
 
 const VISIBILITIES = [
   { value: "private", label: "Privado — solo vos" },
@@ -48,6 +49,7 @@ type EventCreateFormProps = {
     email: string;
   };
   initial?: EventFormInitial;
+  returnTo?: string | null;
 };
 
 const REPEAT_OPTIONS = [
@@ -90,8 +92,10 @@ function initialRange(defaultDate?: string, initial?: EventFormInitial): { start
   return { start, end: new Date(start.getTime() + 3600000) };
 }
 
-export function EventCreateForm({ defaultDate, defaultContact, initial }: EventCreateFormProps) {
+export function EventCreateForm({ defaultDate, defaultContact, initial, returnTo }: EventCreateFormProps) {
   const router = useRouter();
+  const explicitReturn = safeReturnPath(returnTo);
+  const [leaveTo, setLeaveTo] = useState(explicitReturn ?? "/");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [uploading, setUploading] = useState(false);
@@ -116,11 +120,16 @@ export function EventCreateForm({ defaultDate, defaultContact, initial }: EventC
   const [descriptionHtml, setDescriptionHtml] = useState(initial?.description ?? "");
   const isEdit = Boolean(initial);
 
+  useEffect(() => {
+    setLeaveTo(explicitReturn ?? rememberedSection());
+  }, [explicitReturn]);
+
   async function onSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setError(null);
     setLoading(true);
     const fd = new FormData(e.currentTarget);
+    const leave = fd.get("intent") === "leave";
 
     const title = String(fd.get("title") ?? "").trim();
     const tagsRaw = String(fd.get("tags") ?? "");
@@ -165,16 +174,22 @@ export function EventCreateForm({ defaultDate, defaultContact, initial }: EventC
           parsed,
         );
         const first = result.occurrences[0];
-        if (first) router.push(`/e/${first.id}`);
-        else router.push("/mi-agenda");
+        if (leave) router.replace(leaveTo);
+        else if (first) {
+          const next = new URLSearchParams({ volver: leaveTo });
+          router.push(`/e/${first.id}?${next.toString()}`);
+        } else router.replace(leaveTo);
       } else {
         const result = await clientApiPost<{ event: { id: string }; occurrences: { id: string }[] }>(
           "/events",
           parsed,
         );
         const first = result.occurrences[0];
-        if (first) router.push(`/e/${first.id}`);
-        else router.push("/mi-agenda");
+        if (leave) router.replace(leaveTo);
+        else if (first) {
+          const next = new URLSearchParams({ volver: leaveTo });
+          router.push(`/e/${first.id}?${next.toString()}`);
+        } else router.replace(leaveTo);
       }
       router.refresh();
     } catch (err) {
@@ -467,17 +482,34 @@ export function EventCreateForm({ defaultDate, defaultContact, initial }: EventC
         </p>
       ) : null}
 
-      <button type="submit" className="btn-primary w-full" disabled={loading || uploading}>
-        {loading || uploading
-          ? uploading
-            ? "Subiendo imagen…"
+      <div className="flex flex-col gap-2 sm:flex-row">
+        <button
+          type="submit"
+          name="intent"
+          value="stay"
+          className="btn-primary flex-1"
+          disabled={loading || uploading}
+        >
+          {loading || uploading
+            ? uploading
+              ? "Subiendo imagen…"
+              : isEdit
+                ? "Guardando…"
+                : "Publicando…"
             : isEdit
-              ? "Guardando…"
-              : "Publicando…"
-          : isEdit
-            ? "Guardar cambios"
-            : "Publicar evento"}
-      </button>
+              ? "Guardar cambios"
+              : "Publicar"}
+        </button>
+        <button
+          type="submit"
+          name="intent"
+          value="leave"
+          className="btn-secondary flex-1"
+          disabled={loading || uploading}
+        >
+          {isEdit ? "Guardar y salir" : "Publicar y salir"}
+        </button>
+      </div>
     </form>
   );
 }

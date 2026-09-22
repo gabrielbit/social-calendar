@@ -4,9 +4,10 @@ import { Container } from "@/components/layout/Container";
 import { getOccurrenceDetail } from "@/lib/queries";
 import { appUrl } from "@/lib/dates";
 import { createClient } from "@/lib/supabase/server";
+import { safeReturnPath } from "@/lib/return-to";
 import type { Metadata } from "next";
 
-type Props = { params: Promise<{ occurrenceId: string }> };
+type Props = { params: Promise<{ occurrenceId: string }>; searchParams: Promise<{ volver?: string }> };
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { occurrenceId } = await params;
@@ -81,8 +82,9 @@ function buildJsonLd(occurrence: NonNullable<Awaited<ReturnType<typeof getOccurr
   };
 }
 
-export default async function CanonicalEventPage({ params }: Props) {
+export default async function CanonicalEventPage({ params, searchParams }: Props) {
   const { occurrenceId } = await params;
+  const { volver } = await searchParams;
   const occurrence = await getOccurrenceDetail(occurrenceId);
   if (!occurrence || occurrence.cancelled) notFound();
 
@@ -107,6 +109,7 @@ export default async function CanonicalEventPage({ params }: Props) {
         canEdit={Boolean(
           user && (user.id === occurrence.event.author_id || user.id === occurrence.event.author?.id),
         )}
+        returnTo={safeReturnPath(volver)}
       />
       </Container>
     </>

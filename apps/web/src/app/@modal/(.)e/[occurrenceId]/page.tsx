@@ -4,10 +4,13 @@ import { EventDetailView } from "@/components/events/EventDetailView";
 import { getOccurrenceDetail } from "@/lib/queries";
 import { createClient } from "@/lib/supabase/server";
 
-type Props = { params: Promise<{ occurrenceId: string }> };
+import { safeReturnPath } from "@/lib/return-to";
 
-export default async function EventDetailModalPage({ params }: Props) {
+type Props = { params: Promise<{ occurrenceId: string }>; searchParams: Promise<{ volver?: string }> };
+
+export default async function EventDetailModalPage({ params, searchParams }: Props) {
   const { occurrenceId } = await params;
+  const { volver } = await searchParams;
   const occurrence = await getOccurrenceDetail(occurrenceId);
   if (!occurrence || occurrence.cancelled) notFound();
 
@@ -23,6 +26,7 @@ export default async function EventDetailModalPage({ params }: Props) {
         canEdit={Boolean(
           user && (user.id === occurrence.event.author_id || user.id === occurrence.event.author?.id),
         )}
+        returnTo={safeReturnPath(volver)}
       />
     </EventDetailDialog>
   );

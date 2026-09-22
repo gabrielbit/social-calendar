@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { DM_Sans } from "next/font/google";
 import { Nav } from "@/components/layout/Nav";
+import { SectionMemory } from "@/components/layout/SectionMemory";
 import { SiteFooter } from "@/components/layout/SiteFooter";
 import "./globals.css";
 
@@ -38,6 +39,7 @@ export default function RootLayout({
           className="pointer-events-none fixed inset-x-0 top-0 z-0 h-64 bg-[radial-gradient(ellipse_at_top,rgba(155,135,245,0.2),transparent_70%)]"
           aria-hidden
         />
+        <SectionMemory />
         <Nav />
         <main className="relative pt-[calc(3.5rem+env(safe-area-inset-top))]">{children}</main>
         {modal}
