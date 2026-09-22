@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { CreateEventSchema, DEFAULT_TIMEZONE, slugify } from "@agenda/domain";
 import { clientApiPatch, clientApiPost } from "@/lib/api-client";
 import { EventDateTimePicker } from "@/components/events/EventDateTimePicker";
@@ -119,17 +119,32 @@ export function EventCreateForm({ defaultDate, defaultContact, initial, returnTo
   const [isFree, setIsFree] = useState(Boolean(initial?.isFree));
   const [descriptionHtml, setDescriptionHtml] = useState(initial?.description ?? "");
   const isEdit = Boolean(initial);
+  const persistedId = useRef(initial?.id ?? null);
+  const submitting = useRef(false);
 
   useEffect(() => {
     setLeaveTo(explicitReturn ?? rememberedSection());
   }, [explicitReturn]);
 
+  function destination(): string {
+    const current = window.location.pathname;
+    if (!leaveTo || leaveTo === current) return "/";
+    return leaveTo;
+  }
+
+  function leaveForm() {
+    window.location.assign(destination());
+  }
+
   async function onSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
+    if (submitting.current) return;
+    submitting.current = true;
     setError(null);
     setLoading(true);
     const fd = new FormData(e.currentTarget);
-    const leave = fd.get("intent") === "leave";
+    const submitter = (e.nativeEvent as SubmitEvent).submitter;
+    const leave = submitter instanceof HTMLButtonElement && submitter.value === "leave";
 
     const title = String(fd.get("title") ?? "").trim();
     const tagsRaw = String(fd.get("tags") ?? "");
@@ -168,34 +183,33 @@ export function EventCreateForm({ defaultDate, defaultContact, initial, returnTo
 
     try {
       const parsed = CreateEventSchema.parse(payload);
-      if (initial) {
-        const result = await clientApiPatch<{ event: { id: string }; occurrences: { id: string }[] }>(
-          `/events/${initial.id}`,
-          parsed,
-        );
-        const first = result.occurrences[0];
-        if (leave) router.replace(leaveTo);
-        else if (first) {
-          const next = new URLSearchParams({ volver: leaveTo });
-          router.push(`/e/${first.id}?${next.toString()}`);
-        } else router.replace(leaveTo);
-      } else {
-        const result = await clientApiPost<{ event: { id: string }; occurrences: { id: string }[] }>(
-          "/events",
-          parsed,
-        );
-        const first = result.occurrences[0];
-        if (leave) router.replace(leaveTo);
-        else if (first) {
-          const next = new URLSearchParams({ volver: leaveTo });
-          router.push(`/e/${first.id}?${next.toString()}`);
-        } else router.replace(leaveTo);
+      const eventId = persistedId.current;
+      const result = eventId
+        ? await clientApiPatch<{ event: { id: string }; occurrences: { id: string }[] }>(
+            `/events/${eventId}`,
+            parsed,
+          )
+        : await clientApiPost<{ event: { id: string }; occurrences: { id: string }[] }>(
+            "/events",
+            parsed,
+          );
+      persistedId.current = result.event.id;
+      const first = result.occurrences[0];
+      if (leave || !first) {
+        leaveForm();
+        return;
       }
-      router.refresh();
+      const next = new URLSearchParams({ volver: destination() });
+      router.push(`/e/${first.id}?${next.toString()}`);
     } catch (err) {
-      setError(err instanceof Error ? err.message : isEdit ? "No se pudo guardar el evento" : "No se pudo crear el evento");
-    } finally {
+      submitting.current = false;
       setLoading(false);
+      const message = err instanceof Error ? err.message : "";
+      if (message.includes("events_agenda_id_slug_key")) {
+        setError("Ese evento ya se publicó. Salí y volvé a entrar para editarlo.");
+        return;
+      }
+      setError(message || (isEdit ? "No se pudo guardar el evento" : "No se pudo crear el evento"));
     }
   }
 
@@ -483,6 +497,16 @@ export function EventCreateForm({ defaultDate, defaultContact, initial, returnTo
       ) : null}
 
       <div className="flex flex-col gap-2 sm:flex-row">
+        {isEdit ? (
+          <button
+            type="button"
+            className="btn-secondary sm:w-auto"
+            onClick={leaveForm}
+            disabled={loading || uploading}
+          >
+            Cancelar
+          </button>
+        ) : null}
         <button
           type="submit"
           name="intent"
