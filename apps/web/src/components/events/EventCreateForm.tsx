@@ -6,6 +6,7 @@ import { CreateEventSchema, DEFAULT_TIMEZONE, slugify } from "@agenda/domain";
 import { clientApiPatch, clientApiPost } from "@/lib/api-client";
 import { EventDateTimePicker } from "@/components/events/EventDateTimePicker";
 import { EventMediaField } from "@/components/events/EventMediaField";
+import { RichTextEditor } from "@/components/events/RichTextEditor";
 import { LocationAutocomplete } from "@/components/settings/LocationAutocomplete";
 import { ensureEndsAfterStart, localDateAt, nextHourStart } from "@/lib/dates";
 
@@ -112,6 +113,7 @@ export function EventCreateForm({ defaultDate, defaultContact, initial }: EventC
   );
   const [contactEmail, setContactEmail] = useState(initial?.email ?? defaultContact?.email ?? "");
   const [isFree, setIsFree] = useState(Boolean(initial?.isFree));
+  const [descriptionHtml, setDescriptionHtml] = useState(initial?.description ?? "");
   const isEdit = Boolean(initial);
 
   async function onSubmit(e: React.FormEvent<HTMLFormElement>) {
@@ -127,7 +129,7 @@ export function EventCreateForm({ defaultDate, defaultContact, initial }: EventC
     const payload = {
       title,
       slug: slugify(title) || undefined,
-      descriptionHtml: String(fd.get("description") ?? "") || undefined,
+      descriptionHtml: descriptionHtml.trim() || undefined,
       visibility: String(fd.get("visibility") || "shared"),
       editorialStatus: "published",
       startsAt: startsAt.toISOString(),
@@ -274,14 +276,13 @@ export function EventCreateForm({ defaultDate, defaultContact, initial }: EventC
 
       <div>
         <label htmlFor="description" className="mb-1.5 block text-sm text-ink-muted">
-          Descripción (HTML simple permitido)
+          Descripción
         </label>
-        <textarea
+        <RichTextEditor
           id="description"
-          name="description"
-          rows={4}
-          className="input-field"
-          defaultValue={initial?.description}
+          value={descriptionHtml}
+          onChange={setDescriptionHtml}
+          placeholder="Contá de qué se trata… Podés pegar texto con formato."
         />
       </div>
 

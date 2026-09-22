@@ -5,6 +5,7 @@ import { ExternalLink, Pencil, Ticket } from "lucide-react";
 import { buildGoogleMapsUrl, resolveContactDisplay } from "@agenda/domain";
 import { ContactLinks } from "@/components/contact/ContactLinks";
 import { EventActions } from "@/components/events/EventActions";
+import { useEventDetailNavigateAway } from "@/components/events/EventDetailDialog";
 import { EventFlyer } from "@/components/events/EventFlyer";
 import { InstagramSource } from "@/components/events/InstagramSource";
 import { formatEventClock, formatEventDate } from "@/lib/dates";
@@ -54,6 +55,8 @@ export function EventDetailView({
 }: EventDetailViewProps) {
   const { event } = occurrence;
   const author = event.author;
+  const navigateAway = useEventDetailNavigateAway();
+  const editHref = `/events/${event.id}/edit`;
 
   const dateLabel = capitalize(
     formatEventDate(occurrence.starts_at, occurrence.timezone, occurrence.all_day),
@@ -124,10 +127,21 @@ export function EventDetailView({
           {event.title}
         </h1>
         {canEdit ? (
-          <Link href={`/events/${event.id}/edit`} className="btn-secondary shrink-0 text-[13px]">
-            <Pencil className="size-3.5" aria-hidden />
-            Editar evento
-          </Link>
+          navigateAway ? (
+            <button
+              type="button"
+              className="btn-secondary shrink-0 text-[13px]"
+              onClick={() => navigateAway(editHref)}
+            >
+              <Pencil className="size-3.5" aria-hidden />
+              Editar evento
+            </button>
+          ) : (
+            <Link href={editHref} className="btn-secondary shrink-0 text-[13px]">
+              <Pencil className="size-3.5" aria-hidden />
+              Editar evento
+            </Link>
+          )
         ) : null}
       </div>
 
@@ -193,7 +207,7 @@ export function EventDetailView({
 
       {event.description_html ? (
         <div
-          className="prose prose-invert max-w-none text-pretty text-sm leading-relaxed text-neutral-300 prose-a:text-accent-300"
+          className="prose prose-invert prose-sm max-w-none text-pretty leading-relaxed text-neutral-300 prose-headings:text-ink prose-a:text-accent-300 prose-strong:text-ink"
           dangerouslySetInnerHTML={{ __html: event.description_html }}
         />
       ) : null}
